@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Listing from "@/models/Listing";
-import User from "@/models/User";
-import mongoose from "mongoose";
+import { db } from "@/lib/firebase/admin";
+import { getListingByIdOrSlug, updateListing, deleteListing, incrementListingViews } from "@/lib/db/listings";
+import { getUserById, removeListingFromUser, updateUser } from "@/lib/db/users";
 import { getDataFromToken } from "@/lib/auth";
-
 
 function extractParamFromRequest(request) {
 	const url = new URL(request.url, process.env.NEXT_PUBLIC_APP_URL);
@@ -14,31 +12,8 @@ function extractParamFromRequest(request) {
 
 export async function GET(request) {
 	try {
-		await connectDB();
 		const slug = extractParamFromRequest(request);
-		let listing;
-		if (mongoose.isValidObjectId(slug)) {
-			listing = await Listing.findById(slug)
-				.populate("seller")
-				.populate({
-					path: "bids",
-					populate: {
-						path: "bidder",
-						select: "name email phone",
-					},
-				});
-			return NextResponse.json(listing);
-		}
-
-		listing = await Listing.findOne({ slug })
-			.populate("seller")
-			.populate({
-				path: "bids",
-				populate: {
-					path: "bidder",
-					select: "name email phone",
-				},
-			});
+		let listing = await getListingByIdOrSlug(slug);
 
 		if (!listing) {
 			return NextResponse.json(
@@ -47,9 +22,51 @@ export async function GET(request) {
 			);
 		}
 
-		await Listing.findByIdAndUpdate(listing._id, {
-			$inc: { views: 1 },
-		});
+		// Increment views
+		await incrementListingViews(listing._id);
+
+		// Populate seller
+		if (listing.seller) {
+			const seller = await getUserById(listing.seller);
+			if (seller) {
+				listing.seller = {
+					_id: seller._id,
+					name: seller.name,
+					avatar: seller.avatar,
+					rating: seller.rating,
+					createdAt: seller.createdAt
+				};
+			}
+		}
+
+		// Populate bids (fetch from bids collection)
+		const bidsSnapshot = await db.collection("bids").where("listing", "==", listing._id).get();
+		let bids = bidsSnapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+		
+		// Populate bidders for bids
+		if (bids.length > 0) {
+			const rawBidderIds = [...new Set(bids.map(b => b.bidder))];
+			const bidderIds = rawBidderIds.map(id => typeof id === 'string' ? id : (id._id || id.id || id.toString())).filter(Boolean);
+			
+			const biddersMap = {};
+			for (let i = 0; i < bidderIds.length; i += 10) {
+				const batch = bidderIds.slice(i, i + 10);
+				if (batch.length > 0) {
+					const biddersSnapshot = await db.collection("users").where("__name__", "in", batch).get();
+					biddersSnapshot.forEach(doc => {
+						const data = doc.data();
+						biddersMap[doc.id] = { _id: doc.id, name: data.name, email: data.email, phone: data.phone };
+					});
+				}
+			}
+
+			bids = bids.map(bid => ({
+				...bid,
+				bidder: biddersMap[bid.bidder] || { _id: bid.bidder, name: "Unknown" }
+			}));
+		}
+
+		listing.bids = bids;
 
 		return NextResponse.json(listing);
 	} catch (error) {
@@ -64,9 +81,7 @@ export async function GET(request) {
 export async function PUT(request) {
 	try {
 		const {  ...updateData } = await request.json();
-
 		const userId = await getDataFromToken(request);
-
 		const slug = extractParamFromRequest(request);
 
 		if (!userId) {
@@ -76,18 +91,12 @@ export async function PUT(request) {
 			);
 		}
 
-		await connectDB();
-		const user = await User.findById(userId);
-		let listing;
-		if (mongoose.isValidObjectId(slug)) {
-			listing = await Listing.findById(slug);
-		} else {
-			listing = await Listing.findOne({ slug });
-		}
+		const user = await getUserById(userId);
+		let listing = await getListingByIdOrSlug(slug);
 
 		if (
 			!listing &&
-			(listing.seller.toString() !== userId || user.role !== "admin")
+			(listing.seller !== userId || user.role !== "admin")
 		) {
 			return NextResponse.json(
 				{ message: "Unauthorized" },
@@ -95,17 +104,13 @@ export async function PUT(request) {
 			);
 		}
 
-		const updated = await Listing.findByIdAndUpdate(
-			listing._id,
-			updateData,
-			{
-				new: true,
-			}
-		);
+		const updated = await updateListing(listing._id, updateData);
+
 		if (updated.status === "sold") {
-			const user = await User.findById(userId);
-			user.totalSales += listing.price;
-			await user.save();
+			const currentTotalSales = user.totalSales || 0;
+			await updateUser(userId, {
+				totalSales: currentTotalSales + updated.price
+			});
 		}
 
 		return NextResponse.json({ success: true, listing: updated });
@@ -130,24 +135,18 @@ export async function DELETE(request) {
 			);
 		}
 
-		await connectDB();
-
-		const user = await User.findById(userId);
-		const listing = await Listing.findById(slug);
-		if (
-			(!listing && listing.seller.toString() !== userId) ||
-			user.role !== "admin"
-		) {
+		const user = await getUserById(userId);
+		const listing = await getListingByIdOrSlug(slug);
+		
+		if (!listing || (listing.seller !== userId && user.role !== "admin")) {
 			return NextResponse.json(
 				{ message: "Unauthorized" },
 				{ status: 401 }
 			);
 		}
 
-		await Listing.findByIdAndDelete(listing._id);
-		await User.findByIdAndUpdate(userId, {
-			$pull: { listings: listing._id },
-		});
+		await deleteListing(listing._id);
+		await removeListingFromUser(userId, listing._id);
 
 		return NextResponse.json({ success: true });
 	} catch (error) {

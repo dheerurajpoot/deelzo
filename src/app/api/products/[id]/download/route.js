@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import Product from "@/models/Product";
+import { getProductByIdOrSlug } from "@/lib/db/products";
 import { getDataFromToken } from "@/lib/auth";
 
-// GET /api/products/[id]/download - Get download URL for a product
 export async function GET(request, { params }) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -14,13 +12,10 @@ export async function GET(request, { params }) {
 				{ status: 401 }
 			);
 		}
-
-		await connectDB();
 		
 		const { id } = await params;
 		
-		// Find the product
-		const product = await Product.findById(id);
+		const product = await getProductByIdOrSlug(id);
 		
 		if (!product) {
 			return NextResponse.json(
@@ -29,7 +24,6 @@ export async function GET(request, { params }) {
 			);
 		}
 		
-		// Check if product has download options
 		if (!product.downloadOptions) {
 			return NextResponse.json(
 				{ success: false, message: "No download available for this product" },
@@ -37,11 +31,9 @@ export async function GET(request, { params }) {
 			);
 		}
 		
-		// Return appropriate download URL based on type
 		let downloadUrl = null;
 		
 		if (product.downloadOptions.type === "upload" && product.downloadOptions.file?.url) {
-			// Use the direct URL from ImageKit
 			downloadUrl = product.downloadOptions.file.url;
 		} else if (product.downloadOptions.type === "link" && product.downloadOptions.link) {
 			downloadUrl = product.downloadOptions.link;

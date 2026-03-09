@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
 
 export const revalidate = 0;
 export async function GET() {
 	try {
-		await connectDB();
 		const response = new NextResponse();
 		response.cookies.set("token", "", {
 			httpOnly: true,

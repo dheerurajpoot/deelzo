@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import Order from "@/models/Order";
-import User from "@/models/User";
+import { db } from "@/lib/firebase/admin";
 import { getDataFromToken } from "@/lib/auth";
+import { getUserById } from "@/lib/db/users";
+import { getOrderById, updateOrder } from "@/lib/db/orders";
 
-// PATCH /api/admin/orders/[id]/status - Update order status (admin only)
 export async function PATCH(request, { params }) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -16,10 +15,7 @@ export async function PATCH(request, { params }) {
 			);
 		}
 
-		await connectDB();
-		
-		// Check if user is admin
-		const user = await User.findById(userId);
+		const user = await getUserById(userId);
 		if (!user || user.role !== "admin") {
 			return NextResponse.json(
 				{ success: false, message: "Admin access required" },
@@ -28,12 +24,8 @@ export async function PATCH(request, { params }) {
 		}
 
 		const { id } = await params;
+		const { status } = await request.json();
 		
-		// Get the new status from request body
-		const body = await request.json();
-		const { status } = body;
-		
-		// Validate status
 		const validStatuses = ["pending", "processing", "completed", "cancelled", "refunded"];
 		if (!validStatuses.includes(status)) {
 			return NextResponse.json(
@@ -42,8 +34,7 @@ export async function PATCH(request, { params }) {
 			);
 		}
 
-		// Find the order
-		const order = await Order.findById(id);
+		const order = await getOrderById(id);
 		if (!order) {
 			return NextResponse.json(
 				{ success: false, message: "Order not found" },
@@ -51,43 +42,34 @@ export async function PATCH(request, { params }) {
 			);
 		}
 
-		// Update the order status
-		order.status = status;
-		
-		// Update payment status based on order status
+		const updateData = { status, updatedAt: new Date() };
+
 		if (status === "completed") {
-			order.paymentStatus = "completed";
-			order.deliveryStatus = "delivered";
-			if (!order.deliveredAt) {
-				order.deliveredAt = new Date();
-			}
-			if (!order.paidAt) {
-				order.paidAt = new Date();
-			}
+			updateData.paymentStatus = "completed";
+			updateData.deliveryStatus = "delivered";
+			if (!order.deliveredAt) updateData.deliveredAt = new Date();
+			if (!order.paidAt) updateData.paidAt = new Date();
 		} else if (status === "cancelled") {
-			order.paymentStatus = "cancelled";
+			updateData.paymentStatus = "cancelled";
 		} else if (status === "refunded") {
-			order.paymentStatus = "refunded";
-			order.refundedAt = new Date();
+			updateData.paymentStatus = "refunded";
+			updateData.refundedAt = new Date();
 		} else if (status === "processing") {
 			if (order.paymentStatus === "pending") {
-				order.paymentStatus = "completed"; // Assume payment is verified when moved to processing
+				updateData.paymentStatus = "completed";
 			}
 		}
 		
-		// If status is cancelled or refunded, you might want to handle payment refund logic here
-		// For now, we'll just update the status
-		
-		await order.save();
+		const updatedOrder = await updateOrder(id, updateData);
 
 		return NextResponse.json({
 			success: true,
 			message: "Order status updated successfully",
 			order: {
-				_id: order._id,
-				orderId: order.orderId,
-				status: order.status,
-				deliveredAt: order.deliveredAt
+				_id: updatedOrder._id,
+				orderId: updatedOrder.orderId,
+				status: updatedOrder.status,
+				deliveredAt: updatedOrder.deliveredAt
 			}
 		});
 	} catch (error) {

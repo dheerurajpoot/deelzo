@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import Order from "@/models/Order";
-import User from "@/models/User";
+import { db } from "@/lib/firebase/admin";
 import { getDataFromToken } from "@/lib/auth";
+import { getUserById } from "@/lib/db/users";
 
-// GET /api/admin/orders - Get all orders (admin only)
 export async function GET(request) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -16,10 +14,7 @@ export async function GET(request) {
 			);
 		}
 
-		await connectDB();
-		
-		// Check if user is admin
-		const user = await User.findById(userId);
+		const user = await getUserById(userId);
 		if (!user || user.role !== "admin") {
 			return NextResponse.json(
 				{ success: false, message: "Admin access required" },
@@ -34,65 +29,96 @@ export async function GET(request) {
 		const limit = parseInt(searchParams.get("limit")) || 20;
 		const search = searchParams.get("search");
 		
-		// Build query
-		const query = {};
-		if (status) query.status = status;
-		if (paymentStatus) query.paymentStatus = paymentStatus;
+		let ordersRef = db.collection("orders");
+		if (status) ordersRef = ordersRef.where("status", "==", status);
+		if (paymentStatus) ordersRef = ordersRef.where("paymentStatus", "==", paymentStatus);
+		const snapshot = await ordersRef.get();
+		let allOrders = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
 		
+		allOrders.sort((a, b) => {
+			const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+			const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+			return timeB - timeA;
+		});
+
 		if (search) {
-			query.$or = [
-				{ orderId: { $regex: search, $options: "i" } },
-				{ "productSnapshot.title": { $regex: search, $options: "i" } },
-			];
+			const s = search.toLowerCase();
+			allOrders = allOrders.filter(o => 
+				(o.orderId && o.orderId.toLowerCase().includes(s)) ||
+				(o.productSnapshot?.title && o.productSnapshot.title.toLowerCase().includes(s))
+			);
 		}
-		
-		const skip = (page - 1) * limit;
-		
-		const [orders, total] = await Promise.all([
-			Order.find(query)
-				.populate("user", "name email")
-				.populate("product", "title thumbnail slug")
-				.sort({ createdAt: -1 })
-				.skip(skip)
-				.limit(limit)
-				.lean(),
-			Order.countDocuments(query),
-		]);
-		
+
 		// Calculate stats
-		const stats = await Order.aggregate([
-			{
-				$group: {
-					_id: null,
-					totalRevenue: {
-						$sum: {
-							$cond: [{ $eq: ["$paymentStatus", "completed"] }, "$finalAmount", 0]
-						}
-					},
-					totalOrders: { $sum: 1 },
-					completedOrders: {
-						$sum: { $cond: [{ $eq: ["$paymentStatus", "completed"] }, 1, 0] }
-					},
-					pendingOrders: {
-						$sum: { $cond: [{ $eq: ["$paymentStatus", "pending"] }, 1, 0] }
-					},
-					failedOrders: {
-						$sum: { $cond: [{ $eq: ["$paymentStatus", "failed"] }, 1, 0] }
-					},
-				},
-			},
-		]);
+		const stats = {
+			totalRevenue: 0,
+			totalOrders: allOrders.length,
+			completedOrders: 0,
+			pendingOrders: 0,
+			failedOrders: 0,
+		};
+
+		allOrders.forEach(o => {
+			if (o.paymentStatus === "completed") {
+				stats.completedOrders++;
+				stats.totalRevenue += (o.finalAmount || 0);
+			} else if (o.paymentStatus === "pending") {
+				stats.pendingOrders++;
+			} else if (o.paymentStatus === "failed") {
+				stats.failedOrders++;
+			}
+		});
+
+		const total = allOrders.length;
+		const skip = (page - 1) * limit;
+		const paginatedOrders = allOrders.slice(skip, skip + limit);
 		
+		// Populate users and products
+		const rawUserIds = [...new Set(paginatedOrders.map(o => o.user))];
+		const userIds = rawUserIds.map(id => typeof id === 'string' ? id : (id._id || id.id || id.toString())).filter(Boolean);
+		
+		const rawProductIds = [...new Set(paginatedOrders.map(o => o.product))];
+		const productIds = rawProductIds.map(id => typeof id === 'string' ? id : (id._id || id.id || id.toString())).filter(Boolean);
+
+		const usersMap = {};
+		if (userIds.length > 0) {
+			for (let i = 0; i < userIds.length; i += 10) {
+				const batch = userIds.slice(i, i + 10);
+				if (batch.length > 0) {
+					const usersSnapshot = await db.collection("users").where("__name__", "in", batch).get();
+					usersSnapshot.forEach(doc => {
+						const data = doc.data();
+						usersMap[doc.id] = { _id: doc.id, name: data.name, email: data.email };
+					});
+				}
+			}
+		}
+
+		const productsMap = {};
+		if (productIds.length > 0) {
+			for (let i = 0; i < productIds.length; i += 10) {
+				const batch = productIds.slice(i, i + 10);
+				if (batch.length > 0) {
+					const productsSnapshot = await db.collection("products").where("__name__", "in", batch).get();
+					productsSnapshot.forEach(doc => {
+						const data = doc.data();
+						productsMap[doc.id] = { _id: doc.id, title: data.title, thumbnail: data.thumbnail, slug: data.slug };
+					});
+				}
+			}
+		}
+
+		for (let i = 0; i < paginatedOrders.length; i++) {
+			const uId = paginatedOrders[i].user;
+			const pId = paginatedOrders[i].product;
+			paginatedOrders[i].user = usersMap[uId] || { _id: uId, name: "Unknown" };
+			paginatedOrders[i].product = productsMap[pId] || { _id: pId, title: "Unknown" };
+		}
+
 		return NextResponse.json({
 			success: true,
-			orders,
-			stats: stats[0] || {
-				totalRevenue: 0,
-				totalOrders: 0,
-				completedOrders: 0,
-				pendingOrders: 0,
-				failedOrders: 0,
-			},
+			orders: paginatedOrders,
+			stats,
 			pagination: {
 				page,
 				limit,

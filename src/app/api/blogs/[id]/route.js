@@ -1,28 +1,14 @@
-import mongoose from "mongoose";
-import { connectDB } from "@/lib/mongodb";
-import Blog from "@/models/Blog";
-import User from "@/models/User";
+import { db } from "@/lib/firebase/admin";
+import { getBlogByIdOrSlug, updateBlog, deleteBlog, incrementBlogViews } from "@/lib/db/blogs";
+import { getUserById } from "@/lib/db/users";
 import { getDataFromToken } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { extractParamFromRequest } from "@/lib/utils";
 
 export async function GET(request) {
 	try {
-		await connectDB();
-
 		const id = extractParamFromRequest(request);
-		let blog;
-
-		if (mongoose.Types.ObjectId.isValid(id)) {
-			blog = await Blog.findById(id).populate("author", "name avatar");
-		}
-
-		if (!blog) {
-			blog = await Blog.findOne({ slug: id }).populate(
-				"author",
-				"name avatar"
-			);
-		}
+		let blog = await getBlogByIdOrSlug(id);
 
 		if (!blog) {
 			return NextResponse.json(
@@ -32,7 +18,14 @@ export async function GET(request) {
 		}
 
 		// Increment views
-		await Blog.findByIdAndUpdate(blog._id, { $inc: { views: 1 } });
+		await incrementBlogViews(blog._id);
+
+		if (blog.author) {
+			const author = await getUserById(blog.author);
+			if (author) {
+				blog.author = { _id: author._id, name: author.name, avatar: author.avatar };
+			}
+		}
 
 		return NextResponse.json({ success: true, blog });
 	} catch (error) {
@@ -45,8 +38,7 @@ export async function GET(request) {
 
 export async function PUT(request) {
 	try {
-		await connectDB();
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		if (!userId) {
 			return NextResponse.json(
 				{ success: false, message: "Unauthorized" },
@@ -54,11 +46,11 @@ export async function PUT(request) {
 			);
 		}
 
-		const user = await User.findById(userId);
+		const user = await getUserById(userId);
 		const id = extractParamFromRequest(request);
 		const body = await request.json();
 
-		const blog = await Blog.findById(id);
+		const blog = await getBlogByIdOrSlug(id);
 		if (!blog) {
 			return NextResponse.json(
 				{ success: false, message: "Blog not found" },
@@ -66,42 +58,37 @@ export async function PUT(request) {
 			);
 		}
 
-		// Check permissions
-		if (blog.author.toString() !== userId && user.role !== "admin") {
+		if (blog.author !== userId && user.role !== "admin") {
 			return NextResponse.json(
 				{ success: false, message: "Forbidden" },
 				{ status: 403 }
 			);
 		}
 
-		// If user is updating, reset status to pending (unless admin)
 		if (user.role !== "admin") {
 			if (body.status !== "draft") {
 				body.status = "pending";
 			}
 		}
 
-		// Ensure slug uniqueness (excluding current blog)
 		if (body.slug) {
-			const existingBlog = await Blog.findOne({
-				slug: body.slug,
-				_id: { $ne: id },
+			const snapshot = await db.collection("blogs").where("slug", "==", body.slug).get();
+			let conflict = false;
+			snapshot.forEach(doc => {
+				if (doc.id !== blog._id) conflict = true;
 			});
-			if (existingBlog) {
+			if (conflict) {
 				return NextResponse.json(
 					{
 						success: false,
-						message:
-							"A blog with this slug already exists. Please choose a different slug.",
+						message: "A blog with this slug already exists. Please choose a different slug.",
 					},
 					{ status: 400 }
 				);
 			}
 		}
 
-		const updatedBlog = await Blog.findByIdAndUpdate(id, body, {
-			new: true,
-		});
+		const updatedBlog = await updateBlog(blog._id, body);
 		return NextResponse.json({ success: true, blog: updatedBlog });
 	} catch (error) {
 		return NextResponse.json(
@@ -113,8 +100,7 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
 	try {
-		await connectDB();
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		if (!userId) {
 			return NextResponse.json(
 				{ success: false, message: "Unauthorized" },
@@ -122,10 +108,10 @@ export async function DELETE(request) {
 			);
 		}
 
-		const user = await User.findById(userId);
+		const user = await getUserById(userId);
 		const id = extractParamFromRequest(request);
 
-		const blog = await Blog.findById(id);
+		const blog = await getBlogByIdOrSlug(id);
 		if (!blog) {
 			return NextResponse.json(
 				{ success: false, message: "Blog not found" },
@@ -133,14 +119,14 @@ export async function DELETE(request) {
 			);
 		}
 
-		if (blog.author.toString() !== userId && user.role !== "admin") {
+		if (blog.author !== userId && user.role !== "admin") {
 			return NextResponse.json(
 				{ success: false, message: "Forbidden" },
 				{ status: 403 }
 			);
 		}
 
-		await Blog.findByIdAndDelete(id);
+		await deleteBlog(blog._id);
 		return NextResponse.json({ success: true, message: "Blog deleted" });
 	} catch (error) {
 		return NextResponse.json(

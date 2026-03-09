@@ -12,47 +12,89 @@ import {
 	BookCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { connectDB } from "@/lib/mongodb";
-import Blog from "@/models/Blog";
-import UserModel from "@/models/User"; // Ensure User model is registered
-import mongoose from "mongoose";
+import { db } from "@/lib/firebase/admin";
+import { getBlogByIdOrSlug } from "@/lib/db/blogs";
+import { getUserById } from "@/lib/db/users";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
-// Helper to fetch blog
 async function getBlog(slug: string) {
-	await connectDB();
-	// Ensure User model is registered before population
-	const _ = UserModel;
+	let blog = await getBlogByIdOrSlug(slug);
 
-	// Try by slug first
-	let blog = await Blog.findOne({ slug, status: { $in: ["published", "pending", "rejected"] } }).populate(
-		"author",
-		"name avatar"
-	);
+	if (!blog) return null;
+	if (!["published", "pending", "rejected"].includes((blog as any).status)) return null;
 
-	// If not found and it looks like an ID, try ID (backward compatibility)
-	if (!blog && mongoose.Types.ObjectId.isValid(slug)) {
-		blog = await Blog.findOne({ _id: slug, status: "published" }).populate(
-			"author",
-			"name avatar"
-		);
+	if (blog.author) {
+		const authorData = await getUserById(blog.author);
+		if (authorData) {
+			blog.author = {
+				_id: authorData._id,
+				name: authorData.name,
+				avatar: authorData.avatar
+			};
+		}
 	}
 
 	return blog;
 }
 
-// Helper to fetch latest blogs
-async function getLatestBlogs(currentId: any) {
-	await connectDB();
-	const blogs = await Blog.find({
-		status: "published",
-		_id: { $ne: currentId },
-	})
-		.sort({ createdAt: -1 })
-		.limit(3)
-		.populate("author", "name avatar");
-	return blogs;
+async function getLatestBlogs(currentId: string) {
+	const snapshot = await db.collection("blogs")
+		.where("status", "==", "published")
+		.get();
+		
+	let allPBlogs = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() } as any));
+	
+	allPBlogs.sort((a, b) => {
+		const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+		const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+		return timeB - timeA;
+	});
+
+	let blogs = allPBlogs
+		.filter(b => b._id !== currentId)
+		.slice(0, 3);
+		
+	if (blogs.length > 0) {
+		const rawAuthorIds = [...new Set(blogs.map(b => b.author))];
+		const authorIds = rawAuthorIds.map(id => typeof id === 'string' ? id : (id._id || id.id || id.toString())).filter(Boolean);
+		const authorsMap: Record<string, any> = {};
+		
+		for (let i = 0; i < authorIds.length; i += 10) {
+			const batch = authorIds.slice(i, i + 10);
+			if (batch.length > 0) {
+				const authorsSnapshot = await db.collection("users").where("__name__", "in", batch).get();
+				authorsSnapshot.forEach(doc => {
+					authorsMap[doc.id] = { _id: doc.id, name: doc.data().name, avatar: doc.data().avatar };
+				});
+			}
+		}
+
+		blogs = blogs.map(b => ({
+			...b,
+			author: authorsMap[b.author] || { _id: b.author, name: "Unknown" }
+		}));
+	}
+	// Deep serialize
+	const serializeFirebaseData = (obj: any): any => {
+		if (obj === null || obj === undefined) return obj;
+		if (typeof obj?.toDate === "function") return obj.toDate().toISOString();
+		if (typeof obj === "object" && obj._seconds !== undefined && obj._nanoseconds !== undefined) {
+			return new Date(obj._seconds * 1000).toISOString();
+		}
+		if (obj instanceof Date) return obj.toISOString();
+		if (Array.isArray(obj)) return obj.map(serializeFirebaseData);
+		if (typeof obj === "object") {
+			const res: any = {};
+			for (const key in obj) {
+				res[key] = serializeFirebaseData(obj[key]);
+			}
+			return res;
+		}
+		return obj;
+	};
+
+	return serializeFirebaseData(blogs);
 }
 
 export async function generateMetadata({
@@ -100,16 +142,17 @@ export default async function BlogPostPage({
 		notFound();
 	}
 
-	// Increment views
 	try {
-		await Blog.findByIdAndUpdate(blog._id, { $inc: { views: 1 } });
+        const { FieldValue } = require("firebase-admin/firestore");
+		await db.collection("blogs").doc(blog._id).update({
+            views: FieldValue.increment(1)
+        });
 	} catch (e) {
 		console.error("Failed to increment views", e);
 	}
 
 	const latestBlogs = await getLatestBlogs(blog._id);
 
-	// Calculate read time (approx 200 words per minute)
 	const wordCount = blog.content
 		.replace(/<[^>]*>?/gm, "")
 		.split(/\s+/).length;
@@ -117,8 +160,6 @@ export default async function BlogPostPage({
 
 	return (
 		<div className='min-h-screen bg-slate-50'>
-			{/* Breadcrumb Section */}
-
 			<article className='container mx-auto px-4 py-5 max-w-5xl'>
 				<div className='container mx-auto max-w-5xl py-4'>
 					<div className='flex items-center gap-2 text-sm text-slate-500'>
@@ -140,7 +181,6 @@ export default async function BlogPostPage({
 						</span>
 					</div>
 				</div>
-				{/* Header Section */}
 				<div className=' mb-6'>
 					<h1 className='text-3xl md:text-5xl font-bold text-slate-900 mb-3 leading-tight'>
 						{blog.title}
@@ -175,7 +215,7 @@ export default async function BlogPostPage({
 						<div className='flex items-center gap-1'>
 							<Calendar size={14} />
 							<span>
-								{new Date(blog.createdAt).toLocaleDateString(
+								{new Date(blog.createdAt?.toDate ? blog.createdAt.toDate() : blog.createdAt).toLocaleDateString(
 									"en-US",
 									{
 										year: "numeric",
@@ -193,7 +233,6 @@ export default async function BlogPostPage({
 					</div>
 				</div>
 
-				{/* Featured Image */}
 				{blog.image && (
 					<div className='relative w-full aspect-video rounded-2xl overflow-hidden mb-12 shadow-xl'>
 						<Image
@@ -206,7 +245,6 @@ export default async function BlogPostPage({
 					</div>
 				)}
 
-				{/* Content */}
 				<div
 					className='prose prose-lg prose-slate max-w-none 
 					prose-headings:font-bold prose-headings:text-slate-900 
@@ -223,7 +261,6 @@ export default async function BlogPostPage({
 				/>
 			</article>
 
-			{/* Latest Posts Section */}
 			{latestBlogs.length > 0 && (
 				<div className='bg-slate-100 py-16 mt-12 border-t border-slate-200'>
 					<div className='container mx-auto px-4 max-w-6xl'>
@@ -277,7 +314,7 @@ export default async function BlogPostPage({
 												<span className='flex items-center gap-1'>
 													<Calendar size={12} />
 													{new Date(
-														latestBlog.createdAt
+														latestBlog.createdAt?.toDate ? latestBlog.createdAt.toDate() : latestBlog.createdAt
 													).toLocaleDateString()}
 												</span>
 												<span className='flex items-center gap-1'>

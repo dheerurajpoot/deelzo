@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import Order from "@/models/Order";
-import User from "@/models/User";
+import { db } from "@/lib/firebase/admin";
 import { getDataFromToken } from "@/lib/auth";
+import { getUserById } from "@/lib/db/users";
+import { deleteOrder } from "@/lib/db/orders";
 
-// DELETE /api/admin/orders/[id] - Delete an order (admin only)
 export async function DELETE(request, { params }) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -16,10 +15,7 @@ export async function DELETE(request, { params }) {
 			);
 		}
 
-		await connectDB();
-		
-		// Check if user is admin
-		const user = await User.findById(userId);
+		const user = await getUserById(userId);
 		if (!user || user.role !== "admin") {
 			return NextResponse.json(
 				{ success: false, message: "Admin access required" },
@@ -29,16 +25,15 @@ export async function DELETE(request, { params }) {
 
 		const { id } = await params;
 
-		// Find and delete the order
-		const order = await Order.findById(id);
-		if (!order) {
+		const orderDoc = await db.collection("orders").doc(id).get();
+		if (!orderDoc.exists) {
 			return NextResponse.json(
 				{ success: false, message: "Order not found" },
 				{ status: 404 }
 			);
 		}
 
-		await Order.findByIdAndDelete(id);
+		await deleteOrder(id);
 
 		return NextResponse.json({
 			success: true,

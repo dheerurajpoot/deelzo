@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
+import { db } from "@/lib/firebase/admin";
 import { getDataFromToken } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
 import { writeFile } from "fs/promises";
 
-// POST /api/products/upload-download - Upload download file for a product
 export async function POST(request) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -16,8 +15,6 @@ export async function POST(request) {
 				{ status: 401 }
 			);
 		}
-
-		await connectDB();
 		
 		const data = await request.formData();
 		const file = data.get("file");
@@ -43,25 +40,25 @@ export async function POST(request) {
 		// Create unique filename
 		const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
 		const ext = path.extname(file.name);
-		// Sanitize filename
 		const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
 		const filename = safeName.replace(ext, "") + "-" + uniqueSuffix + ext;
 		
 		// Save to public/downloads
 		const uploadDir = path.join(process.cwd(), "public/downloads");
 		
-		// Ensure directory exists
 		if (!fs.existsSync(uploadDir)) {
 			fs.mkdirSync(uploadDir, { recursive: true });
 		}
 		
 		const filepath = path.join(uploadDir, filename);
-		
 		await writeFile(filepath, buffer);
 		
 		const url = `/downloads/${filename}`;
 		const fileSize = buffer.length;
-		
+
+		// Since this is a product file upload, you might want to link the url to the product. 
+		// The previous version just returned the URL. Not explicitly updating DB here.
+
 		return NextResponse.json({
 			success: true,
 			file: {

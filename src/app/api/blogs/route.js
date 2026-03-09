@@ -1,15 +1,14 @@
-import { connectDB } from "@/lib/mongodb";
-import Blog from "@/models/Blog";
-import User from "@/models/User";
-import Plan from "@/models/Plan";
+import { db } from "@/lib/firebase/admin";
+import { getUserById } from "@/lib/db/users";
+import { getPlanByName } from "@/lib/db/plans";
+import { createBlog } from "@/lib/db/blogs";
 import { getDataFromToken } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/emails";
-import { EMAIL } from "@/lib/constant"
+import { EMAIL } from "@/lib/constant";
 
 export async function GET(request) {
 	try {
-		await connectDB();
 		const { searchParams } = new URL(request.url);
 		const status = searchParams.get("status");
 		const userId = searchParams.get("userId");
@@ -17,29 +16,59 @@ export async function GET(request) {
 		const search = searchParams.get("search");
 		const limit = parseInt(searchParams.get("limit")) || 10;
 		const page = parseInt(searchParams.get("page")) || 1;
+		const skip = (page - 1) * limit;
 
-		let query = {};
-		if (status) query.status = status;
-		if (userId) query.author = userId;
-		if (category && category !== "All") query.category = category;
+		let blogsRef = db.collection("blogs");
+		if (status) blogsRef = blogsRef.where("status", "==", status);
+		if (userId) blogsRef = blogsRef.where("author", "==", userId);
+		if (category && category !== "All") blogsRef = blogsRef.where("category", "==", category);
+		
+		const snapshot = await blogsRef.get();
+		let allBlogs = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+		
+		allBlogs.sort((a, b) => {
+			const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+			const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+			return timeB - timeA;
+		});
+
+		// Handle regex search in-memory since Firestore doesn't support it natively
 		if (search) {
-			query.$or = [
-				{ title: { $regex: search, $options: "i" } },
-				{ content: { $regex: search, $options: "i" } },
-			];
+			const lowerSearch = search.toLowerCase();
+			allBlogs = allBlogs.filter(blog => 
+				(blog.title && blog.title.toLowerCase().includes(lowerSearch)) ||
+				(blog.content && blog.content.toLowerCase().includes(lowerSearch))
+			);
 		}
 
-		const blogs = await Blog.find(query)
-			.populate("author", "name avatar")
-			.sort({ createdAt: -1 })
-			.skip((page - 1) * limit)
-			.limit(limit);
+		const total = allBlogs.length;
+		const paginatedBlogs = allBlogs.slice(skip, skip + limit);
 
-		const total = await Blog.countDocuments(query);
+		// Populate author
+		const rawAuthorIds = [...new Set(paginatedBlogs.map(b => b.author))];
+		const authorIds = rawAuthorIds.map(id => typeof id === 'string' ? id : (id._id || id.id || id.toString())).filter(Boolean);
+		if (authorIds.length > 0) {
+			const usersMap = {};
+			for (let i = 0; i < authorIds.length; i += 10) {
+				const batch = authorIds.slice(i, i + 10);
+				if (batch.length > 0) {
+					const usersSnapshot = await db.collection("users").where("__name__", "in", batch).get();
+					usersSnapshot.forEach(doc => {
+						const data = doc.data();
+						usersMap[doc.id] = { _id: doc.id, name: data.name, avatar: data.avatar };
+					});
+				}
+			}
+
+			for (let i = 0; i < paginatedBlogs.length; i++) {
+				const authorId = paginatedBlogs[i].author;
+				paginatedBlogs[i].author = usersMap[authorId] || { _id: authorId, name: "Unknown" };
+			}
+		}
 
 		return NextResponse.json({
 			success: true,
-			blogs,
+			blogs: paginatedBlogs,
 			totalPages: Math.ceil(total / limit),
 			currentPage: page,
 		});
@@ -53,8 +82,7 @@ export async function GET(request) {
 
 export async function POST(request) {
 	try {
-		await connectDB();
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		if (!userId) {
 			return NextResponse.json(
 				{ success: false, message: "Unauthorized" },
@@ -62,7 +90,7 @@ export async function POST(request) {
 			);
 		}
 
-		const user = await User.findById(userId);
+		const user = await getUserById(userId);
 		if (!user) {
 			return NextResponse.json(
 				{ success: false, message: "User not found" },
@@ -70,54 +98,47 @@ export async function POST(request) {
 			);
 		}
 
-		// Admin can post without limits
-		if (user.role === "admin") {
-			const body = await request.json();
+		const body = await request.json();
 
-			// Ensure slug uniqueness
+		if (user.role === "admin") {
 			if (body.slug) {
-				const existingBlog = await Blog.findOne({ slug: body.slug });
-				if (existingBlog) {
+				const snapshot = await db.collection("blogs").where("slug", "==", body.slug).limit(1).get();
+				if (!snapshot.empty) {
 					return NextResponse.json(
 						{
 							success: false,
-							message:
-								"A blog with this slug already exists. Please choose a different slug.",
+							message: "A blog with this slug already exists. Please choose a different slug.",
 						},
 						{ status: 400 }
 					);
 				}
 			}
 
-			const newBlog = await Blog.create({
+			const newBlog = await createBlog({
 				...body,
 				author: userId,
-				status: "published", // Admin posts are auto-published
+				status: "published",
 			});
 			return NextResponse.json({ success: true, blog: newBlog });
 		}
 
-		const body = await request.json();
 		const requestedStatus = body.status === "draft" ? "draft" : "pending";
 
-		// If saving as draft, skip limit checks
 		if (requestedStatus === "draft") {
-			// Ensure slug uniqueness
 			if (body.slug) {
-				const existingBlog = await Blog.findOne({ slug: body.slug });
-				if (existingBlog) {
+				const snapshot = await db.collection("blogs").where("slug", "==", body.slug).limit(1).get();
+				if (!snapshot.empty) {
 					return NextResponse.json(
 						{
 							success: false,
-							message:
-								"A blog with this slug already exists. Please choose a different slug.",
+							message: "A blog with this slug already exists. Please choose a different slug.",
 						},
 						{ status: 400 }
 					);
 				}
 			}
 
-			const newBlog = await Blog.create({
+			const newBlog = await createBlog({
 				...body,
 				author: userId,
 				status: "draft",
@@ -125,16 +146,9 @@ export async function POST(request) {
 			return NextResponse.json({ success: true, blog: newBlog });
 		}
 
-		// Fetch Plan details
-		// Assuming plan names in User match Plan names in DB (case insensitive)
-		const plan = await Plan.findOne({
-			name: { $regex: new RegExp(`^${user.currentPlan}$`, "i") },
-		});
+		const plan = await getPlanByName(user.currentPlan);
 
 		if (!plan) {
-			// Fallback if plan not found in DB (should not happen if seeded)
-			// Default to Free: 1 per week
-			// Or return error. Let's return error to enforce plan creation.
 			return NextResponse.json(
 				{ success: false, message: "Plan configuration not found." },
 				{ status: 400 }
@@ -144,22 +158,16 @@ export async function POST(request) {
 		const now = new Date();
 		let canPost = false;
 
+		const userLastPostDate = user.lastPostDate?.toDate ? user.lastPostDate.toDate() : (user.lastPostDate ? new Date(user.lastPostDate) : null);
+		const userPeriodStartDate = user.periodStartDate?.toDate ? user.periodStartDate.toDate() : (user.periodStartDate ? new Date(user.periodStartDate) : null);
+
 		if (plan.frequency === "daily") {
-			if (
-				!user.lastPostDate ||
-				new Date(user.lastPostDate).toDateString() !==
-					now.toDateString()
-			) {
+			if (!userLastPostDate || userLastPostDate.toDateString() !== now.toDateString()) {
 				canPost = true;
 			}
 		} else {
-			// Weekly
 			const oneWeek = 7 * 24 * 60 * 60 * 1000;
-			if (
-				!user.periodStartDate ||
-				now - new Date(user.periodStartDate) > oneWeek
-			) {
-				// Reset period
+			if (!userPeriodStartDate || now - userPeriodStartDate > oneWeek) {
 				user.postCount = 0;
 				user.periodStartDate = now;
 			}
@@ -179,42 +187,42 @@ export async function POST(request) {
 			);
 		}
 
-		// Ensure slug uniqueness
 		if (body.slug) {
-			const existingBlog = await Blog.findOne({ slug: body.slug });
-			if (existingBlog) {
+			const snapshot = await db.collection("blogs").where("slug", "==", body.slug).limit(1).get();
+			if (!snapshot.empty) {
 				return NextResponse.json(
 					{
 						success: false,
-						message:
-							"A blog with this slug already exists. Please choose a different slug.",
+						message: "A blog with this slug already exists. Please choose a different slug.",
 					},
 					{ status: 400 }
 				);
 			}
 		}
 
-		const newBlog = await Blog.create({
+		const newBlog = await createBlog({
 			...body,
 			author: userId,
-			status: "pending", // User posts need approval? "review all blogs"
+			status: "pending",
 		});
 
-		// New blog Notification to admin
-		await sendEmail({
-			to: EMAIL,
-			subject: `New Blog for Review`,
-			html: "<p>There is a new blog post for review.</p><p>Blog ID: " + newBlog._id + "</p><p>Blog Title: " + newBlog.title + "</p><p>Author: " + user.name + "</p>",
-			})
-
-		
-
-		// Update user stats
-		user.lastPostDate = now;
-		if (plan.frequency !== "daily") {
-			user.postCount += 1;
+		try {
+			await sendEmail({
+				to: EMAIL,
+				subject: `New Blog for Review`,
+				html: "<p>There is a new blog post for review.</p><p>Blog ID: " + newBlog._id + "</p><p>Blog Title: " + newBlog.title + "</p><p>Author: " + user.name + "</p>",
+			});
+		} catch (emailError) {
+			console.error("Failed to send admin blog email", emailError);
 		}
-		await user.save();
+
+		const updates = {
+			lastPostDate: now,
+			postCount: plan.frequency !== "daily" ? (user.postCount + 1) : user.postCount,
+			periodStartDate: user.periodStartDate || now
+		};
+
+		await db.collection("users").doc(userId).update(updates);
 
 		return NextResponse.json({ success: true, blog: newBlog });
 	} catch (error) {

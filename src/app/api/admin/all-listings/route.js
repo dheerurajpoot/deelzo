@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Listing from "@/models/Listing";
-import User from "@/models/User";
-import { sendEmail } from "@/lib/emails";
-import { generateListingStatusUpdate } from "@/lib/emails";
+import { db } from "@/lib/firebase/admin";
+import { getUserById, updateUser } from "@/lib/db/users";
+import { sendEmail, generateListingStatusUpdate } from "@/lib/emails";
 
 export async function GET(request) {
 	try {
@@ -11,9 +9,7 @@ export async function GET(request) {
 		const adminId = searchParams.get("adminId");
 		const status = searchParams.get("status");
 
-		await connectDB();
-
-		const admin = await User.findById(adminId);
+		const admin = await getUserById(adminId);
 		if (!admin || admin.role !== "admin") {
 			return NextResponse.json(
 				{ message: "Unauthorized" },
@@ -21,10 +17,41 @@ export async function GET(request) {
 			);
 		}
 
-		const query = status ? { status } : {};
-		const listings = await Listing.find(query)
-			.populate("seller")
-			.sort({ createdAt: -1 });
+		let listingsRef = db.collection("listings");
+		if (status) {
+			listingsRef = db.collection("listings").where("status", "==", status);
+		}
+
+		const snapshot = await listingsRef.get();
+		let listings = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+
+		listings.sort((a, b) => {
+			const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+			const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+			return timeB - timeA;
+		});
+
+		// Populate seller
+		const rawSellerIds = [...new Set(listings.map(l => l.seller))];
+		const sellerIds = rawSellerIds.map(id => typeof id === 'string' ? id : (id._id || id.id || id.toString())).filter(Boolean);
+		if (sellerIds.length > 0) {
+			const usersMap = {};
+			for (let i = 0; i < sellerIds.length; i += 10) {
+				const batch = sellerIds.slice(i, i + 10);
+				if (batch.length > 0) {
+					const usersSnapshot = await db.collection("users").where("__name__", "in", batch).get();
+					usersSnapshot.forEach(doc => {
+						const data = doc.data();
+						usersMap[doc.id] = { _id: doc.id, name: data.name, email: data.email };
+					});
+				}
+			}
+
+			listings = listings.map(listing => ({
+				...listing,
+				seller: usersMap[listing.seller] || { _id: listing.seller, name: "Unknown" }
+			}));
+		}
 
 		return NextResponse.json(listings);
 	} catch (error) {
@@ -40,10 +67,9 @@ export async function PUT(request) {
 	try {
 		const { listingId, action, adminId } = await request.json();
 
-		await connectDB();
 		const adminNote = "Have an issue, contact to admin on +917755089819";
 
-		const admin = await User.findById(adminId);
+		const admin = await getUserById(adminId);
 		if (!admin || admin.role !== "admin") {
 			return NextResponse.json(
 				{ MessageChannel: "Unauthorized" },
@@ -51,96 +77,30 @@ export async function PUT(request) {
 			);
 		}
 
-		if (action === "pending") {
-			const listing = await Listing.findByIdAndUpdate(listingId, {
-				status: "pending",
-			}).populate("seller", "name email");
-			// Send email notification to seller about status update
+		await db.collection("listings").doc(listingId).update({ status: action, updatedAt: new Date() });
+		
+		const listingDoc = await db.collection("listings").doc(listingId).get();
+		const listing = { _id: listingDoc.id, ...listingDoc.data() };
+		
+		const seller = await getUserById(listing.seller);
+		listing.seller = seller;
+
+		if (["pending", "active", "sold", "rejected", "draft"].includes(action)) {
+			if (action === "sold") {
+				const currentTotalSales = seller.totalSales || 0;
+				await updateUser(seller._id, { totalSales: currentTotalSales + listing.price });
+			}
+
 			const emailContent = generateListingStatusUpdate(
 				listing.title,
-				"pending",
+				action,
 				adminNote
 			);
 
 			await sendEmail({
 				to: listing.seller.email,
 				subject: `Your Listing Status: ${
-					"pending".charAt(0).toUpperCase() + "pending".slice(1)
-				} - ${listing.title}`,
-				html: emailContent,
-			});
-		} else if (action === "active") {
-			const listing = await Listing.findByIdAndUpdate(listingId, {
-				status: "active",
-			}).populate("seller", "name email");
-			// Send email notification to seller about status update
-			const emailContent = generateListingStatusUpdate(
-				listing.title,
-				"active",
-				adminNote
-			);
-
-			await sendEmail({
-				to: listing.seller.email,
-				subject: `Your Listing Status: ${
-					"active".charAt(0).toUpperCase() + "active".slice(1)
-				} - ${listing.title}`,
-				html: emailContent,
-			});
-		} else if (action === "sold") {
-			const listing = await Listing.findByIdAndUpdate(listingId, {
-				status: "sold",
-			}).populate("seller", "name email");
-			const user = await User.findById(listing.seller._id);
-			user.totalSales += listing.price;
-			await user.save();
-			// Send email notification to seller about status update
-			const emailContent = generateListingStatusUpdate(
-				listing.title,
-				"sold",
-				adminNote
-			);
-
-			await sendEmail({
-				to: listing.seller.email,
-				subject: `Your Listing Status: ${
-					"sold".charAt(0).toUpperCase() + "sold".slice(1)
-				} - ${listing.title}`,
-				html: emailContent,
-			});
-		} else if (action === "rejected") {
-			const listing = await Listing.findByIdAndUpdate(listingId, {
-				status: "rejected",
-			}).populate("seller", "name email");
-			// Send email notification to seller about status update
-			const emailContent = generateListingStatusUpdate(
-				listing.title,
-				"rejected",
-				adminNote
-			);
-
-			await sendEmail({
-				to: listing.seller.email,
-				subject: `Your Listing Status: ${
-					"rejected".charAt(0).toUpperCase() + "rejected".slice(1)
-				} - ${listing.title}`,
-				html: emailContent,
-			});
-		} else if (action === "draft") {
-			const listing = await Listing.findByIdAndUpdate(listingId, {
-				status: "draft",
-			}).populate("seller", "name email");
-			// Send email notification to seller about status update
-			const emailContent = generateListingStatusUpdate(
-				listing.title,
-				"draft",
-				adminNote
-			);
-
-			await sendEmail({
-				to: listing.seller.email,
-				subject: `Your Listing Status: ${
-					"draft".charAt(0).toUpperCase() + "draft".slice(1)
+					action.charAt(0).toUpperCase() + action.slice(1)
 				} - ${listing.title}`,
 				html: emailContent,
 			});

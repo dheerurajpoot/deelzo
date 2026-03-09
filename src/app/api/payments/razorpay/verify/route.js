@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import Order from "@/models/Order";
-import Product from "@/models/Product";
+import { db } from "@/lib/firebase/admin";
 import { getDataFromToken } from "@/lib/auth";
 import crypto from "crypto";
 
-// POST /api/payments/razorpay/verify - Verify Razorpay payment
 export async function POST(request) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -32,25 +29,32 @@ export async function POST(request) {
 			);
 		}
 
-		await connectDB();
+		let orderDoc = null;
+		if (orderId) {
+			const doc = await db.collection("orders").doc(orderId).get();
+			if (doc.exists && doc.data().user === userId) {
+				orderDoc = { _id: doc.id, ...doc.data() };
+			}
+		} 
 		
-		// Find the order
-		const order = await Order.findOne({
-			$or: [
-				{ _id: orderId },
-				{ "razorpay.orderId": razorpay_order_id }
-			],
-			user: userId,
-		});
+		if (!orderDoc) {
+			const snapshot = await db.collection("orders")
+				.where("razorpay.orderId", "==", razorpay_order_id)
+				.where("user", "==", userId)
+				.limit(1)
+				.get();
+			if (!snapshot.empty) {
+				orderDoc = { _id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+			}
+		}
 		
-		if (!order) {
+		if (!orderDoc) {
 			return NextResponse.json(
 				{ success: false, message: "Order not found" },
 				{ status: 404 }
 			);
 		}
 		
-		// Verify signature
 		const generatedSignature = crypto
 			.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
 			.update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -59,10 +63,11 @@ export async function POST(request) {
 		const isSignatureValid = generatedSignature === razorpay_signature;
 		
 		if (!isSignatureValid) {
-			// Update order as failed
-			order.paymentStatus = "failed";
-			order.status = "cancelled";
-			await order.save();
+			await db.collection("orders").doc(orderDoc._id).update({
+				paymentStatus: "failed",
+				status: "cancelled",
+				updatedAt: new Date()
+			});
 			
 			return NextResponse.json(
 				{ success: false, message: "Invalid payment signature" },
@@ -70,43 +75,48 @@ export async function POST(request) {
 			);
 		}
 		
-		// Payment successful - update order
-		order.razorpay.paymentId = razorpay_payment_id;
-		order.razorpay.signature = razorpay_signature;
-		order.paymentStatus = "completed";
-		order.status = "completed";
-		order.deliveryStatus = "delivered";
-		order.paidAt = new Date();
-		order.deliveredAt = new Date();
-		
-		// Generate download URL (valid for 7 days)
 		const downloadExpiry = new Date();
 		downloadExpiry.setDate(downloadExpiry.getDate() + 7);
-		order.downloadExpiry = downloadExpiry;
 		
-		await order.save();
-		
-		// Update product sales count
-		await Product.findByIdAndUpdate(order.product, {
-			$inc: { salesCount: 1 },
+		await db.collection("orders").doc(orderDoc._id).update({
+			"razorpay.paymentId": razorpay_payment_id,
+			"razorpay.signature": razorpay_signature,
+			paymentStatus: "completed",
+			status: "completed",
+			deliveryStatus: "delivered",
+			paidAt: new Date(),
+			deliveredAt: new Date(),
+			downloadExpiry,
+			updatedAt: new Date()
 		});
-		
-		// Decrease stock if limited
-		const product = await Product.findById(order.product);
-		if (product && product.stock > 0) {
-			product.stock -= 1;
-			await product.save();
+
+		// Update product sales count and stock
+		if (orderDoc.product) {
+			const productRef = db.collection("products").doc(orderDoc.product);
+			const productDoc = await productRef.get();
+			
+			if (productDoc.exists) {
+				const productUpdates = { salesCount: (productDoc.data().salesCount || 0) + 1 };
+				
+				if (productDoc.data().stock !== undefined && productDoc.data().stock > 0) {
+					productUpdates.stock = productDoc.data().stock - 1;
+				}
+				
+				await productRef.update(productUpdates);
+			}
 		}
+		
+		const updatedOrderDoc = await db.collection("orders").doc(orderDoc._id).get();
 		
 		return NextResponse.json({
 			success: true,
 			message: "Payment verified successfully",
 			order: {
-				id: order._id,
-				orderId: order.orderId,
-				status: order.status,
-				paymentStatus: order.paymentStatus,
-				downloadExpiry: order.downloadExpiry,
+				id: updatedOrderDoc.id,
+				orderId: updatedOrderDoc.data().orderId,
+				status: updatedOrderDoc.data().status,
+				paymentStatus: updatedOrderDoc.data().paymentStatus,
+				downloadExpiry: updatedOrderDoc.data().downloadExpiry?.toDate(),
 			},
 		});
 	} catch (error) {

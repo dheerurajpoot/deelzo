@@ -1,9 +1,7 @@
 import { notFound } from "next/navigation";
-import { connectDB } from "@/lib/mongodb";
-import Listing from "@/models/Listing";
-import Bid from "@/models/Bid";
-import User from "@/models/User";
-import mongoose from "mongoose";
+import { db } from "@/lib/firebase/admin";
+import { getListingByIdOrSlug } from "@/lib/db/listings";
+import { getUserById } from "@/lib/db/users";
 import {
 	ListingGalleryWrapper,
 	ListingSidebar,
@@ -13,38 +11,84 @@ import {
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
-// Helper to fetch listing
 async function getListing(slug: string) {
-	await connectDB();
-	// Ensure models are registered
-	const _u = User;
-	const _b = Bid;
-
-	let listing = await Listing.findOne({ slug }).populate(
-		"seller",
-		"name avatar phone role verified rating totalSales listings"
-	);
-
-	// If not found and valid ID, try by ID
-	if (!listing && mongoose.Types.ObjectId.isValid(slug)) {
-		listing = await Listing.findOne({ _id: slug }).populate(
-			"seller",
-			"name avatar phone role verified rating totalSales listings"
-		);
-	}
+	let listing = await getListingByIdOrSlug(slug);
 
 	if (!listing) return null;
+	if (listing.status !== "active" && listing.status !== "sold") return null;
+
+	// Populate seller
+	if (listing.seller) {
+		const sellerData = await getUserById(listing.seller);
+		if (sellerData) {
+			listing.seller = {
+				_id: sellerData._id,
+				name: sellerData.name,
+				avatar: sellerData.avatar,
+				phone: sellerData.phone,
+				role: sellerData.role,
+				verified: sellerData.verified,
+				rating: sellerData.rating,
+				totalSales: sellerData.totalSales,
+				listings: sellerData.listings || []
+			};
+		}
+	}
 
 	// Fetch bids
-	const bids = await Bid.find({ listing: listing._id })
-		.sort({ createdAt: -1 })
-		.populate("bidder", "name phone");
+	const bidsSnapshot = await db.collection("bids")
+		.where("listing", "==", listing._id)
+		.get();
+	
+	let bids = bidsSnapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() } as any));
 
-	// Convert to plain object to pass to client components
-	const listingObj = JSON.parse(JSON.stringify(listing));
-	listingObj.bids = JSON.parse(JSON.stringify(bids));
+	bids.sort((a, b) => {
+		const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+		const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+		return timeB - timeA;
+	});
 
-	return listingObj;
+	if (bids.length > 0) {
+		const rawBidderIds = [...new Set(bids.map(b => b.bidder))];
+		const bidderIds = rawBidderIds.map(id => typeof id === 'string' ? id : (id._id || id.id || id.toString())).filter(Boolean);
+		const biddersMap: Record<string, any> = {};
+		
+		for (let i = 0; i < bidderIds.length; i += 10) {
+			const batch = bidderIds.slice(i, i + 10);
+			if (batch.length > 0) {
+				const biddersSnapshot = await db.collection("users").where("__name__", "in", batch).get();
+				biddersSnapshot.forEach(doc => {
+					biddersMap[doc.id] = { _id: doc.id, name: doc.data().name, phone: doc.data().phone };
+				});
+			}
+		}
+
+		bids = bids.map(bid => ({
+			...bid,
+			bidder: biddersMap[bid.bidder] || { _id: bid.bidder, name: "Unknown" }
+		}));
+	}
+	
+	// Deep serialize to convert Firestore Timestamps to ISO strings for Client Components
+	const serializeFirebaseData = (obj: any): any => {
+		if (obj === null || obj === undefined) return obj;
+		if (typeof obj?.toDate === "function") return obj.toDate().toISOString();
+		if (typeof obj === "object" && obj._seconds !== undefined && obj._nanoseconds !== undefined) {
+			return new Date(obj._seconds * 1000).toISOString();
+		}
+		if (obj instanceof Date) return obj.toISOString();
+		if (Array.isArray(obj)) return obj.map(serializeFirebaseData);
+		if (typeof obj === "object") {
+			const res: any = {};
+			for (const key in obj) {
+				res[key] = serializeFirebaseData(obj[key]);
+			}
+			return res;
+		}
+		return obj;
+	};
+
+	return serializeFirebaseData(listing);
 }
 
 export async function generateMetadata({
@@ -91,9 +135,12 @@ export default async function ListingPage({
 		notFound();
 	}
 
-	// Increment views (fire and forget)
+	// Increment views
 	try {
-		await Listing.findByIdAndUpdate(listing._id, { $inc: { views: 1 } });
+        const { FieldValue } = require("firebase-admin/firestore");
+		await db.collection("listings").doc(listing._id).update({
+            views: FieldValue.increment(1)
+        });
 	} catch (e) {
 		console.error("Failed to increment views", e);
 	}
@@ -113,7 +160,6 @@ export default async function ListingPage({
 	return (
 		<div className='min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-100 pb-24 md:pb-8'>
 			<div className='max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-6'>
-				{/* Header / Breadcrumbs */}
 				<div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6'>
 					<nav className='flex items-center text-sm text-slate-600 gap-1 md:gap-2 flex-wrap'>
 						{breadcrumbs.map((crumb, index) => (
@@ -137,7 +183,6 @@ export default async function ListingPage({
 				</div>
 
 				<div className='grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8'>
-					{/* Main Content */}
 					<div className='lg:col-span-2 space-y-6'>
 						<ListingGalleryWrapper listing={listing}>
 							<ListingMobilePrice listing={listing} />
@@ -145,7 +190,6 @@ export default async function ListingPage({
 						</ListingGalleryWrapper>
 					</div>
 
-					{/* Sidebar */}
 					<div className='lg:col-span-1'>
 						<div className='sticky top-24'>
 							<ListingSidebar listing={listing} />

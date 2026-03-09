@@ -1,39 +1,33 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Coupon from "@/models/Coupon";
-import { getDataFromToken } from "../../../lib/auth";
-import User from "../../../models/User";
+import { db } from "@/lib/firebase/admin";
+import { createCoupon } from "@/lib/db/coupons";
+import { getDataFromToken } from "@/lib/auth";
+import { getUserById } from "@/lib/db/users";
 
 export async function GET(request) {
   try {
-    await connectDB();
-    
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = parseInt(searchParams.get('limit')) || 10;
     const search = searchParams.get('search') || '';
     
-    // Build query
-    let query = {};
+    let couponsRef = db.collection("coupons").orderBy("createdAt", "desc");
     
+    const snapshot = await couponsRef.get();
+    let allCoupons = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+
     if (search) {
-      query.$or = [
-        { code: { $regex: search, $options: 'i' } }
-      ];
+      const lowerSearch = search.toLowerCase();
+      allCoupons = allCoupons.filter(c => c.code && c.code.toLowerCase().includes(lowerSearch));
     }
-    
+
+    const total = allCoupons.length;
     const skip = (page - 1) * limit;
-    
-    const coupons = await Coupon.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-    
-    const total = await Coupon.countDocuments(query);
+    const paginatedCoupons = allCoupons.slice(skip, skip + limit);
     
     return NextResponse.json({
       success: true,
-      coupons,
+      coupons: paginatedCoupons,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(total / limit),
@@ -55,8 +49,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const userId = await getDataFromToken(request);
-
-    const user = await User.findById(userId).exec();
+    const user = await getUserById(userId);
 
     if (!user || user.role !== "admin") {
       return NextResponse.json(
@@ -64,8 +57,6 @@ export async function POST(request) {
         { status: 401 }
       );
     }
-    
-    await connectDB();
     
     const body = await request.json();
     const { 
@@ -80,7 +71,6 @@ export async function POST(request) {
       applicableProducts 
     } = body;
     
-    // Validate required fields
     if (!code || !discountType || !discountValue || !validUntil) {
       return NextResponse.json(
         { success: false, message: "Missing required fields" },
@@ -88,16 +78,15 @@ export async function POST(request) {
       );
     }
     
-    // Check if coupon code already exists
-    const existingCoupon = await Coupon.findOne({ code: code.toUpperCase() });
-    if (existingCoupon) {
+    const existingSnapshot = await db.collection("coupons").where("code", "==", code.toUpperCase()).limit(1).get();
+    if (!existingSnapshot.empty) {
       return NextResponse.json(
         { success: false, message: "Coupon code already exists" },
         { status: 400 }
       );
     }
     
-    const newCoupon = new Coupon({
+    const newCoupon = await createCoupon({
       code: code.toUpperCase(),
       discountType,
       discountValue,
@@ -108,8 +97,6 @@ export async function POST(request) {
       applicableCategories: applicableCategories || [],
       applicableProducts: applicableProducts || []
     });
-    
-    await newCoupon.save();
     
     return NextResponse.json({
       success: true,

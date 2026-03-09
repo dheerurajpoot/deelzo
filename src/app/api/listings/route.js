@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Listing from "@/models/Listing";
-import User from "@/models/User";
-import { sendEmail } from "@/lib/emails";
-import { generateNewListingNotification } from "@/lib/emails";
+import { db } from "@/lib/firebase/admin";
+import { createListing } from "@/lib/db/listings";
+import { getUserById, addListingToUser } from "@/lib/db/users";
+import { sendEmail, generateNewListingNotification } from "@/lib/emails";
 
 export async function GET(request) {
 	try {
-		await connectDB();
-
 		const { searchParams } = new URL(request.url);
 		const category = searchParams.get("category");
 		const page = Number.parseInt(searchParams.get("page")) || 1;
@@ -17,61 +14,64 @@ export async function GET(request) {
 
 		const userId = searchParams.get("userId");
 
-		const query = {};
-		if (category) query.category = category;
-
-		let listings;
+		let listingsRef = db.collection("listings");
+		let countRef = db.collection("listings");
 
 		if (userId) {
-			// User listings (no status priority needed)
-			listings = await Listing.find({ seller: userId })
-				.sort({ createdAt: -1 })
-				.skip(skip)
-				.limit(limit);
+			listingsRef = listingsRef.where("seller", "==", userId);
+			countRef = countRef.where("seller", "==", userId);
 		} else {
-			// Public listings: active first, then sold
-			listings = await Listing.aggregate([
-				{
-					$match: {
-						...query,
-						status: { $in: ["active", "sold"] },
-					},
-				},
-				{
-					$addFields: {
-						statusOrder: {
-							$cond: [{ $eq: ["$status", "active"] }, 1, 2],
-						},
-					},
-				},
-				{
-					$sort: {
-						statusOrder: 1, // active first
-						createdAt: -1, // newest first inside each status
-					},
-				},
-				{ $skip: skip },
-				{ $limit: limit },
-				{
-					$lookup: {
-						from: "users",
-						localField: "seller",
-						foreignField: "_id",
-						as: "seller",
-						pipeline: [
-							{ $project: { name: 1, avatar: 1, rating: 1 } },
-						],
-					},
-				},
-				{ $unwind: "$seller" },
-			]);
+			listingsRef = listingsRef.where("status", "in", ["active", "sold"]);
+			countRef = countRef.where("status", "in", ["active", "sold"]);
+			if (category) {
+				listingsRef = listingsRef.where("category", "==", category);
+				countRef = countRef.where("category", "==", category);
+			}
 		}
 
-		const total = await Listing.countDocuments(
-			userId
-				? { seller: userId }
-				: { ...query, status: { $in: ["active", "sold"] } }
-		);
+		// Fetch all documents matching filters
+		const snapshot = await listingsRef.get();
+		let listings = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+		
+		listings.sort((a, b) => {
+			const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+			const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+			return timeB - timeA;
+		});
+
+		const total = listings.length;
+		listings = listings.slice(skip, skip + limit);
+
+		// Custom sort: active first, then sold (only for public view)
+		if (!userId) {
+			listings.sort((a, b) => {
+				if (a.status === "active" && b.status !== "active") return -1;
+				if (a.status !== "active" && b.status === "active") return 1;
+				return 0; // Maintain createdAt order for same status
+			});
+		}
+
+		// Populate sellers
+		const rawSellerIds = [...new Set(listings.map(l => l.seller))];
+		const sellerIds = rawSellerIds.map(id => typeof id === 'string' ? id : (id._id || id.id || id.toString())).filter(Boolean);
+		if (sellerIds.length > 0) {
+			const usersMap = {};
+			for (let i = 0; i < sellerIds.length; i += 10) {
+				const batch = sellerIds.slice(i, i + 10);
+				if (batch.length > 0) {
+					const usersSnapshot = await db.collection("users").where("__name__", "in", batch).get();
+					usersSnapshot.forEach(doc => {
+						const data = doc.data();
+						usersMap[doc.id] = { _id: doc.id, name: data.name, avatar: data.avatar, rating: data.rating };
+					});
+				}
+			}
+
+			listings = listings.map(listing => ({
+				...listing,
+				seller: usersMap[listing.seller] || { _id: listing.seller, name: "Unknown" }
+			}));
+		}
 
 		return NextResponse.json({
 			listings,
@@ -111,9 +111,15 @@ export async function POST(request) {
 			);
 		}
 
-		await connectDB();
+		const user = await getUserById(userId);
+		if (!user) {
+			return NextResponse.json(
+				{ message: "User not found" },
+				{ status: 404 }
+			);
+		}
 
-		const listing = await Listing.create({
+		const listing = await createListing({
 			title,
 			description,
 			category,
@@ -126,16 +132,13 @@ export async function POST(request) {
 		});
 
 		// Add listing to user's listings
-		const user = await User.findByIdAndUpdate(userId, {
-			$push: { listings: listing._id },
-		}).select("name");
+		await addListingToUser(userId, listing._id);
 
 		// Send email notification to admin
 		try {
-			// Find admin users
-			const admins = await User.find({ role: "admin" }).select("email");
-
-			if (admins.length > 0) {
+			const adminsSnapshot = await db.collection("users").where("role", "==", "admin").get();
+			
+			if (!adminsSnapshot.empty) {
 				const listingLink = `${
 					process.env.NEXT_PUBLIC_APP_URL
 				}/listing/${listing.slug || listing._id}`;
@@ -145,11 +148,13 @@ export async function POST(request) {
 					listingLink
 				);
 
-				// Send email to all admins
+				const adminEmails = [];
+				adminsSnapshot.forEach(doc => adminEmails.push(doc.data().email));
+
 				await Promise.all(
-					admins.map((admin) =>
+					adminEmails.map((email) =>
 						sendEmail({
-							to: admin.email,
+							to: email,
 							subject: `New Listing Requires Review: ${listing.title}`,
 							html: emailContent,
 						})
@@ -161,7 +166,6 @@ export async function POST(request) {
 				"Failed to send new listing notification:",
 				emailError
 			);
-			// Don't fail the request if email sending fails
 		}
 
 		return NextResponse.json({ success: true, listing }, { status: 201 });

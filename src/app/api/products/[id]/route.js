@@ -1,21 +1,13 @@
 import { NextResponse } from "next/server";
-import Product from "@/models/Product";
-import { connectDB } from "@/lib/mongodb";
+import { getProductByIdOrSlug, updateProduct, deleteProduct } from "@/lib/db/products";
+import { getUserById } from "@/lib/db/users";
 import { getDataFromToken } from "@/lib/auth";
 
-
-
-// GET /api/products/[id] - Get single product
 export async function GET(request, { params }) {
 	try {
 		const { id } = await params;
 		
-		await connectDB();
-		
-		const product = await Product.findById(id)
-			.populate("seller", "name email")
-            .populate("reviews.user", "name avatar email")
-			.lean();
+		let product = await getProductByIdOrSlug(id);
 		
 		if (!product) {
 			return NextResponse.json(
@@ -24,6 +16,13 @@ export async function GET(request, { params }) {
 			);
 		}
 		
+		if (product.seller) {
+			const seller = await getUserById(product.seller);
+			if (seller) {
+				product.seller = { _id: seller._id, name: seller.name, email: seller.email };
+			}
+		}
+
 		return NextResponse.json({
 			success: true,
 			product,
@@ -37,10 +36,9 @@ export async function GET(request, { params }) {
 	}
 }
 
-// PUT /api/products/[id] - Update product (admin only)
 export async function PUT(request, { params }) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -52,24 +50,20 @@ export async function PUT(request, { params }) {
 		const { id } = await params;
 		const body = await request.json();
 		
-		await connectDB();
-		
-		const product = await Product.findByIdAndUpdate(
-			id,
-			{ $set: body },
-			{ new: true, runValidators: true }
-		);
-		
-		if (!product) {
+		const productParams = await getProductByIdOrSlug(id);
+
+		if (!productParams) {
 			return NextResponse.json(
 				{ success: false, message: "Product not found" },
 				{ status: 404 }
 			);
 		}
+
+		const updatedProduct = await updateProduct(productParams._id, body);
 		
 		return NextResponse.json({
 			success: true,
-			product,
+			product: updatedProduct,
 			message: "Product updated successfully",
 		});
 	} catch (error) {
@@ -81,10 +75,9 @@ export async function PUT(request, { params }) {
 	}
 }
 
-// DELETE /api/products/[id] - Delete product (admin only)
 export async function DELETE(request, { params }) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		if (!userId) {
 			return NextResponse.json(
 				{ success: false, message: "Unauthorized" },
@@ -93,17 +86,16 @@ export async function DELETE(request, { params }) {
 		}
 
 		const { id } = await params;
+		const productParams = await getProductByIdOrSlug(id);
 		
-		await connectDB();
-		
-		const product = await Product.findByIdAndDelete(id);
-		
-		if (!product) {
+		if (!productParams) {
 			return NextResponse.json(
 				{ success: false, message: "Product not found" },
 				{ status: 404 }
 			);
 		}
+
+		await deleteProduct(productParams._id);
 		
 		return NextResponse.json({
 			success: true,

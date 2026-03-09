@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { getDataFromToken } from "@/lib/auth";
-import User from "@/models/User";
-import Product from "@/models/Product";
-import Transaction from "@/models/Transaction";
+import { getUserById } from "@/lib/db/users";
+import { getProductByIdOrSlug } from "@/lib/db/products";
+import { createTransaction } from "@/lib/db/transactions";
+import { db } from "@/lib/firebase/admin";
 import { sendEmail } from "@/lib/emails";
 import { EMAIL } from "@/lib/constant";
 
 export async function POST(request) {
   try {
-    // Get user from token
     const userId = await getDataFromToken(request);
     if (!userId) {
       return NextResponse.json(
@@ -17,8 +17,7 @@ export async function POST(request) {
       );
     }
 
-    // Verify user exists
-    const user = await User.findById(userId);
+    const user = await getUserById(userId);
     if (!user) {
       return NextResponse.json(
         { success: false, message: "User not found" },
@@ -26,10 +25,8 @@ export async function POST(request) {
       );
     }
 
-    // Parse request body
     const { productId, transactionId, paymentMethod, amount, currency } = await request.json();
 
-    // Validate required fields
     if (!productId || !transactionId || !paymentMethod) {
       return NextResponse.json(
         { success: false, message: "Missing required fields" },
@@ -37,8 +34,7 @@ export async function POST(request) {
       );
     }
 
-    // Verify product exists
-    const product = await Product.findById(productId);
+    const product = await getProductByIdOrSlug(productId);
     if (!product) {
       return NextResponse.json(
         { success: false, message: "Product not found" },
@@ -46,29 +42,24 @@ export async function POST(request) {
       );
     }
 
-    // Check if transaction ID already exists
-    const existingTransaction = await Transaction.findOne({ transactionId });
-    if (existingTransaction) {
+    const existingSnapshot = await db.collection("transactions").where("transactionId", "==", transactionId).limit(1).get();
+    if (!existingSnapshot.empty) {
       return NextResponse.json(
         { success: false, message: "Transaction ID already exists" },
         { status: 400 }
       );
     }
 
-    // Create transaction
-    const newTransaction = new Transaction({
-      userId: user._id,
+    const newTransaction = await createTransaction({
+      user: user._id,
       productId: product._id,
       transactionId,
       paymentMethod,
       amount: amount || product.price,
       currency: currency || product.currency,
-      status: "pending", // Manual verification required
+      status: "pending",
     });
 
-    await newTransaction.save();
-
-    // Send notification to admin for manual verification
     try {
       await sendEmail({
         to: EMAIL,
@@ -79,17 +70,15 @@ export async function POST(request) {
           <p><strong>Product:</strong> ${product.title}</p>
           <p><strong>Transaction ID:</strong> ${transactionId}</p>
           <p><strong>Payment Method:</strong> ${paymentMethod}</p>
-          <p><strong>Amount:</strong> ${amount} ${currency}</p>
+          <p><strong>Amount:</strong> ${amount || product.price} ${currency || product.currency || 'INR'}</p>
           <p><strong>Status:</strong> Pending</p>
           <p>Please verify this transaction and update its status in the admin panel.</p>
         `,
       });
     } catch (emailError) {
       console.error("Failed to send admin notification email:", emailError);
-      // Continue processing even if email fails
     }
 
-    // Send confirmation to user
     try {
       await sendEmail({
         to: user.email,
@@ -99,13 +88,12 @@ export async function POST(request) {
           <p>Thank you for your order! Your transaction has been submitted for verification.</p>
           <p><strong>Transaction ID:</strong> ${transactionId}</p>
           <p><strong>Payment Method:</strong> ${paymentMethod}</p>
-          <p><strong>Amount:</strong> ${amount} ${currency}</p>
+          <p><strong>Amount:</strong> ${amount || product.price} ${currency || product.currency || 'INR'}</p>
           <p>Our team will verify your transaction and approve it shortly. You will receive another email once your order is approved.</p>
         `,
       });
     } catch (emailError) {
       console.error("Failed to send user confirmation email:", emailError);
-      // Continue processing even if email fails
     }
 
     return NextResponse.json({

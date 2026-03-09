@@ -1,17 +1,15 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import Product from "@/models/Product";
-import User from "@/models/User";
+import { db } from "@/lib/firebase/admin";
+import { createProduct } from "@/lib/db/products";
+import { getUserById } from "@/lib/db/users";
 import { getDataFromToken } from "@/lib/auth";
 
-// GET /api/products - Get all products with filters
 export async function GET(request) {
 	try {
-		await connectDB();
-		
 		const { searchParams } = new URL(request.url);
 		const page = parseInt(searchParams.get("page")) || 1;
 		const limit = parseInt(searchParams.get("limit")) || 12;
+		const skip = (page - 1) * limit;
 		const category = searchParams.get("category");
 		const status = searchParams.get("status") || "active";
 		const search = searchParams.get("search");
@@ -21,51 +19,84 @@ export async function GET(request) {
 		const sortOrder = searchParams.get("sortOrder") || "desc";
 		const featured = searchParams.get("featured");
 
-		// Build query
-		const query = {};
+		let productsRef = db.collection("products");
+		if (status) productsRef = productsRef.where("status", "==", status);
+		if (category) productsRef = productsRef.where("category", "==", category);
+		if (featured === "true") productsRef = productsRef.where("isFeatured", "==", true);
 		
-		if (status) query.status = status;
-		if (category) query.category = category;
-		if (featured === "true") query.isFeatured = true;
+		// Note on Firebase indices: using .where() alongside .orderBy() on different fields often requires compound indexes.
+		// For simplicity/compatibility missing those indexes in development, we'll sort them in-memory, or only order by createdAt desc.
 		
-		if (search) {
-			query.$text = { $search: search };
-		}
-		
-		if (minPrice || maxPrice) {
-			query.price = {};
-			if (minPrice) query.price.$gte = parseFloat(minPrice);
-			if (maxPrice) query.price.$lte = parseFloat(maxPrice);
-		}
+		const snapshot = await productsRef.get();
+		let allProducts = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
 
-		// Build sort
-		const sort = {};
-		sort[sortBy] = sortOrder === "asc" ? 1 : -1;
+		const sortField = sortBy === "createdAt" ? "createdAt" : sortBy;
+		allProducts.sort((a, b) => {
+			let valA = a[sortField];
+			let valB = b[sortField];
+			if (valA?.toDate) valA = valA.toDate().getTime();
+			else if (valA && typeof valA === 'string' && sortField === 'createdAt') valA = new Date(valA).getTime();
+			
+			if (valB?.toDate) valB = valB.toDate().getTime();
+			else if (valB && typeof valB === 'string' && sortField === 'createdAt') valB = new Date(valB).getTime();
+			
+			if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+			if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+			return 0;
+		});
 
-		// Execute query
-		const skip = (page - 1) * limit;
-		const [products, total] = await Promise.all([
-			Product.find(query)
-				.sort(sort)
-				.skip(skip)
-				.limit(limit)
-				.populate("seller", "name email")
-				.populate("reviews.user", "name avatar email")
-				.lean(),
-			Product.countDocuments(query),
-		]);
+		// Filtering things not easily supported via native Firebase queries without complex indexes:
+		allProducts = allProducts.filter(p => {
+			let priceMatch = true;
+			if (minPrice && p.price < parseFloat(minPrice)) priceMatch = false;
+			if (maxPrice && p.price > parseFloat(maxPrice)) priceMatch = false;
+			
+			let searchMatch = true;
+			if (search) {
+				const s = search.toLowerCase();
+				searchMatch = (p.title && p.title.toLowerCase().includes(s)) ||
+							  (p.description && p.description.toLowerCase().includes(s));
+			}
+			return priceMatch && searchMatch;
+		});
+
+		const total = allProducts.length;
+		const paginatedProducts = allProducts.slice(skip, skip + limit);
+
+		// Populate sellers
+		const rawSellerIds = [...new Set(paginatedProducts.map(p => p.seller))];
+		const sellerIds = rawSellerIds.map(id => typeof id === 'string' ? id : (id._id || id.id || id.toString())).filter(Boolean);
+		if (sellerIds.length > 0) {
+			const usersMap = {};
+			for (let i = 0; i < sellerIds.length; i += 10) {
+				const batch = sellerIds.slice(i, i + 10);
+				if (batch.length > 0) {
+					const usersSnapshot = await db.collection("users").where("__name__", "in", batch).get();
+					usersSnapshot.forEach(doc => {
+						const data = doc.data();
+						usersMap[doc.id] = { _id: doc.id, name: data.name, email: data.email };
+					});
+				}
+			}
+
+			for (let i = 0; i < paginatedProducts.length; i++) {
+				const sellerId = paginatedProducts[i].seller;
+				paginatedProducts[i].seller = usersMap[sellerId] || { _id: sellerId, name: "Unknown" };
+			}
+		}
 
 		return NextResponse.json({
 			success: true,
-			products,
+			products: paginatedProducts,
 			pagination: {
 				page,
 				limit,
 				total,
 				pages: Math.ceil(total / limit),
-				hasMore: page * limit < total,
+				hasMore: skip + limit < total,
 			},
 		});
+
 	} catch (error) {
 		console.error("Error fetching products:", error);
 		return NextResponse.json(
@@ -75,12 +106,10 @@ export async function GET(request) {
 	}
 }
 
-// POST /api/products - Create new product (admin only)
 export async function POST(request) {
 	try {
-		const userId = getDataFromToken(request);
-
-        const user = await User.findById(userId);
+		const userId = await getDataFromToken(request);
+		const user = await getUserById(userId);
 		
 		if (!user || user.role !== "admin") {
 			return NextResponse.json(
@@ -89,14 +118,11 @@ export async function POST(request) {
 			);
 		}
 
-		await connectDB();
-		
 		const body = await request.json();
 		
-		// Set seller to current admin
 		body.seller = userId;
 		
-		const product = await Product.create(body);
+		const product = await createProduct(body);
 		
 		return NextResponse.json({
 			success: true,

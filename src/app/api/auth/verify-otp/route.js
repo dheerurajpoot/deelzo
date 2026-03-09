@@ -1,11 +1,9 @@
-import { connectDB } from "@/lib/mongodb";
-import User from "@/models/User";
+import { getUserByEmail, updateUser } from "@/lib/db/users";
 
 export async function POST(request) {
 	try {
-		await connectDB();
 		const { email, otp } = await request.json();
-		const user = await User.findOne({ email });
+		const user = await getUserByEmail(email);
 		if (!user)
 			return Response.json(
 				{ success: false, message: "User not found." },
@@ -16,7 +14,10 @@ export async function POST(request) {
 				{ success: false, message: "No OTP set for this user." },
 				{ status: 422 }
 			);
-		if (user.emailVerificationExpiry < new Date())
+		
+		const expiryDate = user.emailVerificationExpiry.toDate ? user.emailVerificationExpiry.toDate() : new Date(user.emailVerificationExpiry);
+		
+		if (expiryDate < new Date())
 			return Response.json(
 				{ success: false, message: "Code expired." },
 				{ status: 422 }
@@ -26,10 +27,13 @@ export async function POST(request) {
 				{ success: false, message: "Incorrect verification code." },
 				{ status: 400 }
 			);
-		user.isEmailVerified = true;
-		user.emailVerificationOtp = undefined;
-		user.emailVerificationExpiry = undefined;
-		await user.save();
+		
+		await updateUser(user._id, {
+			isEmailVerified: true,
+			emailVerificationOtp: null,
+			emailVerificationExpiry: null
+		});
+
 		return Response.json({
 			success: true,
 			message: "Account verified. You can now log in.",

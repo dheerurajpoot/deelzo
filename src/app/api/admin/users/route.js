@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import User from "@/models/User";
+import { db } from "@/lib/firebase/admin";
+import { getUserById, updateUser, deleteUser } from "@/lib/db/users";
 
 export async function GET(request) {
 	try {
 		const { searchParams } = new URL(request.url);
 		const adminId = searchParams.get("adminId");
 
-		await connectDB();
-
-		const admin = await User.findById(adminId);
+		const admin = await getUserById(adminId);
 		if (!admin || admin.role !== "admin") {
 			return NextResponse.json(
 				{ message: "Unauthorized" },
@@ -17,9 +15,14 @@ export async function GET(request) {
 			);
 		}
 
-		const users = await User.find()
-			.select("-password")
-			.sort({ createdAt: -1 });
+		const snapshot = await db.collection("users").orderBy("createdAt", "desc").get();
+		const users = snapshot.docs.map(doc => {
+			const data = doc.data();
+			delete data.password;
+			delete data.passwordResetToken;
+			delete data.passwordResetExpiry;
+			return { _id: doc.id, ...data };
+		});
 
 		return NextResponse.json(users);
 	} catch (error) {
@@ -35,9 +38,7 @@ export async function PUT(request) {
 	try {
 		const { userId, action, adminId, updates } = await request.json();
 
-		await connectDB();
-
-		const admin = await User.findById(adminId);
+		const admin = await getUserById(adminId);
 		if (!admin || admin.role !== "admin") {
 			return NextResponse.json(
 				{ message: "Unauthorized" },
@@ -46,15 +47,14 @@ export async function PUT(request) {
 		}
 
 		if (action === "verify") {
-			await User.findByIdAndUpdate(userId, { verified: true });
+			await updateUser(userId, { verified: true });
 		} else if (action === "unverify") {
-			await User.findByIdAndUpdate(userId, { verified: false });
+			await updateUser(userId, { verified: false });
 		} else if (action === "block") {
-			await User.findByIdAndUpdate(userId, { isBlocked: true });
+			await updateUser(userId, { isBlocked: true });
 		} else if (action === "unblock") {
-			await User.findByIdAndUpdate(userId, { isBlocked: false });
+			await updateUser(userId, { isBlocked: false });
 		} else if (action === "update" && updates) {
-			// Update user details
 			const updateData = {};
 			if (updates.name !== undefined) updateData.name = updates.name;
 			if (updates.email !== undefined) updateData.email = updates.email;
@@ -63,7 +63,7 @@ export async function PUT(request) {
 			if (updates.location !== undefined) updateData.location = updates.location;
 			if (updates.company !== undefined) updateData.company = updates.company;
 
-			await User.findByIdAndUpdate(userId, updateData);
+			await updateUser(userId, updateData);
 		}
 
 		return NextResponse.json({ success: true });
@@ -78,18 +78,19 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
 	try {
-		await connectDB();
 		const { searchParams } = new URL(request.url);
 		const adminId = searchParams.get("adminId");
 		const userId = searchParams.get("userId");
-		const admin = await User.findById(adminId);
+		
+		const admin = await getUserById(adminId);
 		if (!admin || admin.role !== "admin") {
 			return NextResponse.json(
 				{ message: "Unauthorized" },
 				{ status: 401 }
 			);
 		}
-		await User.findByIdAndDelete(userId);
+		
+		await deleteUser(userId);
 		return NextResponse.json({ success: true });
 	} catch (error) {
 		console.error("Admin user delete error:", error);

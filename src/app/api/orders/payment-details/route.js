@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import Order from "@/models/Order";
+import { db } from "@/lib/firebase/admin";
 import { getDataFromToken } from "@/lib/auth";
 
-// PATCH /api/orders/payment-details - Update order payment details for manual verification
 export async function PATCH(request) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -15,12 +13,8 @@ export async function PATCH(request) {
 			);
 		}
 
-		await connectDB();
-		
-		// Parse request body
 		const { transactionId, paymentMethod } = await request.json();
 
-		// Validate required fields
 		if (!transactionId || !paymentMethod) {
 			return NextResponse.json(
 				{ success: false, message: "Missing required fields" },
@@ -28,35 +22,57 @@ export async function PATCH(request) {
 			);
 		}
 
-		// Find the most recent pending order for this user
-		const order = await Order.findOne({
-			user: userId,
-			status: "pending",
-			createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
-		}).sort({ createdAt: -1 });
+		// Find the most recent pending order for this user in last 24h
+		const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+		
+		const snapshot = await db.collection("orders")
+			.where("user", "==", userId)
+			.where("status", "==", "pending")
+			.get();
 
-		if (!order) {
+		if (snapshot.empty) {
 			return NextResponse.json(
 				{ success: false, message: "No pending order found" },
 				{ status: 404 }
 			);
 		}
+		
+		let orders = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+		orders.sort((a, b) => {
+			const timeA = a.data.createdAt?.toDate ? a.data.createdAt.toDate().getTime() : (a.data.createdAt ? new Date(a.data.createdAt).getTime() : 0);
+			const timeB = b.data.createdAt?.toDate ? b.data.createdAt.toDate().getTime() : (b.data.createdAt ? new Date(b.data.createdAt).getTime() : 0);
+			return timeB - timeA;
+		});
+
+		const orderDoc = orders[0];
+		const orderData = orderDoc.data;
+		
+		const createdAt = orderData.createdAt?.toDate ? orderData.createdAt.toDate() : new Date(orderData.createdAt);
+		if (createdAt < oneDayAgo) {
+			return NextResponse.json(
+				{ success: false, message: "No pending order found within the last 24 hours" },
+				{ status: 404 }
+			);
+		}
 
 		// Update order with transaction details
-		order.transactionId = transactionId;
-		order.paymentMethod = paymentMethod;
-		order.paymentStatus = "pending"; // Payment submitted, awaiting admin verification
+		await db.collection("orders").doc(orderDoc.id).update({
+			transactionId,
+			paymentMethod,
+			paymentStatus: "pending", // Payment submitted, awaiting admin verification
+			updatedAt: new Date()
+		});
 
-		await order.save();
+		const updatedOrder = await db.collection("orders").doc(orderDoc.id).get();
 
 		return NextResponse.json({
 			success: true,
 			message: "Order payment details updated successfully",
 			order: {
-				_id: order._id,
-				orderId: order.orderId,
-				status: order.status,
-				paymentStatus: order.paymentStatus,
+				_id: updatedOrder.id,
+				orderId: updatedOrder.data().orderId,
+				status: updatedOrder.data().status,
+				paymentStatus: updatedOrder.data().paymentStatus,
 			}
 		});
 	} catch (error) {

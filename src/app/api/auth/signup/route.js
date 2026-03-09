@@ -1,16 +1,13 @@
-import { connectDB } from "@/lib/mongodb";
-import User from "@/models/User";
+import { getUserByEmail, createUser, updateUser } from "@/lib/db/users";
 import bcrypt from "bcryptjs";
 import { generateOTPEmail, sendEmail } from "@/lib/emails";
 
 export async function POST(request) {
 	try {
-		await connectDB();
-
 		const { name, email, password, phone } = await request.json();
 
 		// Check if user exists
-		const existingUser = await User.findOne({ email });
+		const existingUser = await getUserByEmail(email);
 		if (existingUser) {
 			return Response.json(
 				{ success: false, message: "Email already registered" },
@@ -39,11 +36,20 @@ export async function POST(request) {
 		const hashedPassword = await bcrypt.hash(password, 10);
 
 		// Create user
-		const user = await User.create({
+		const user = await createUser({
 			name,
 			email,
 			password: hashedPassword,
 			phone,
+			role: "user",
+			verified: false,
+			isEmailVerified: false,
+			isBlocked: false,
+			totalSales: 0,
+			rating: 0,
+			listings: [],
+			currentPlan: "free",
+			postCount: 0
 		});
 
 		function generateOTP() {
@@ -52,10 +58,12 @@ export async function POST(request) {
 
 		const otp = generateOTP();
 		const emailVerificationExpiry = new Date(Date.now() + 3600000);
-		await User.updateOne(
-			{ _id: user._id },
-			{ emailVerificationOtp: otp, emailVerificationExpiry }
-		);
+		
+		await updateUser(user._id, {
+			emailVerificationOtp: otp,
+			emailVerificationExpiry
+		});
+		
 		const emailHtml = generateOTPEmail(otp);
 		await sendEmail({
 			to: email,

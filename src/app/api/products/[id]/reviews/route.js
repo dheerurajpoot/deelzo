@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import Product from "@/models/Product";
-import User from "@/models/User";
-import { connectDB } from "@/lib/mongodb";
+import { db } from "@/lib/firebase/admin";
 import { getDataFromToken } from "@/lib/auth";
+import { getUserById } from "@/lib/db/users";
+import { getProductByIdOrSlug } from "@/lib/db/products";
 
-// POST /api/products/[id]/reviews - Submit a review for a product
 export async function POST(request, { params }) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -33,69 +32,62 @@ export async function POST(request, { params }) {
 			);
 		}
 
-		await connectDB();
-
-		// Check if user already reviewed this product
-		const existingReview = await Product.findOne({
-			_id: id,
-			"reviews.user": userId
-		});
-
-		if (existingReview) {
-			return NextResponse.json(
-				{ success: false, message: "You have already reviewed this product" },
-				{ status: 400 }
-			);
-		}
-
-		// Get user details
-		const user = await User.findById(userId).select("name email");
-
-		// Add review to product
-		const updatedProduct = await Product.findByIdAndUpdate(
-			id,
-			{
-				$push: {
-					reviews: {
-						user: userId,
-						rating,
-						comment,
-						createdAt: new Date(),
-					},
-				},
-			},
-			{ new: true, runValidators: true }
-		);
-
-		if (!updatedProduct) {
+		const product = await getProductByIdOrSlug(id);
+		if (!product) {
 			return NextResponse.json(
 				{ success: false, message: "Product not found" },
 				{ status: 404 }
 			);
 		}
 
-		// Recalculate average rating
-		const ratings = updatedProduct.reviews.map(r => r.rating);
-		const averageRating = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+		// Check if user already reviewed
+		const existingReviews = product.reviews || [];
+		if (existingReviews.some(r => r.user === userId)) {
+			return NextResponse.json(
+				{ success: false, message: "You have already reviewed this product" },
+				{ status: 400 }
+			);
+		}
 
-		// Update product rating
-		await Product.findByIdAndUpdate(id, {
-			$set: {
-				"rating.average": averageRating,
-				"rating.count": ratings.length,
-			},
+		const newReview = {
+			user: userId,
+			rating,
+			comment,
+			createdAt: new Date(),
+		};
+
+		const updatedReviews = [...existingReviews, newReview];
+		const ratings = updatedReviews.map(r => r.rating);
+		const averageRating = ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
+
+		await db.collection("products").doc(product._id).update({
+			reviews: updatedReviews,
+			rating: {
+				average: averageRating,
+				count: ratings.length,
+			}
 		});
 
-		// Fetch the updated product with populated user data
-		const productWithReviews = await Product.findById(id)
-			.populate("seller", "name email")
-			.populate("reviews.user", "name avatar email")
-			.lean();
+		// Fetch updated product with expanded references
+		const updatedProductDoc = await db.collection("products").doc(product._id).get();
+		const updatedProduct = { _id: updatedProductDoc.id, ...updatedProductDoc.data() };
+
+		if (updatedProduct.seller) {
+			const seller = await getUserById(updatedProduct.seller);
+			updatedProduct.seller = seller ? { name: seller.name, email: seller.email } : { name: "Unknown" };
+		}
+
+		if (updatedProduct.reviews) {
+			for (let i = 0; i < updatedProduct.reviews.length; i++) {
+				const rUser = await getUserById(updatedProduct.reviews[i].user);
+				updatedProduct.reviews[i].user = rUser ? { name: rUser.name, avatar: rUser.avatar, email: rUser.email } : { name: "Unknown" };
+			}
+		}
 
 		return NextResponse.json({
 			success: true,
 			message: "Review added successfully",
-			product: productWithReviews
+			product: updatedProduct
 		});
 	} catch (error) {
 		console.error("Error adding review:", error);

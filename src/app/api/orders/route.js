@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import Order from "@/models/Order";
-import Product from "@/models/Product";
+import { db } from "@/lib/firebase/admin";
+import { createOrder } from "@/lib/db/orders";
+import { getProductByIdOrSlug } from "@/lib/db/products";
 import { getDataFromToken } from "@/lib/auth";
 import { sendEmail } from "@/lib/emails";
-import { EMAIL } from "@/lib/constant"
+import { EMAIL } from "@/lib/constant";
 
 // GET /api/orders - Get user's orders
 export async function GET(request) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -17,35 +17,55 @@ export async function GET(request) {
 				{ status: 401 }
 			);
 		}
-
-		await connectDB();
 		
 		const { searchParams } = new URL(request.url);
 		const status = searchParams.get("status");
 		const page = parseInt(searchParams.get("page")) || 1;
 		const limit = parseInt(searchParams.get("limit")) || 10;
-		
-		// Build query
-		const query = { user: userId };
-		if (status) {
-			query.status = status;
-		}
-		
 		const skip = (page - 1) * limit;
 		
-		const [orders, total] = await Promise.all([
-			Order.find(query)
-				.populate("product", "title thumbnail slug")
-				.sort({ createdAt: -1 })
-				.skip(skip)
-				.limit(limit)
-				.lean(),
-			Order.countDocuments(query),
-		]);
+		let ordersRef = db.collection("orders").where("user", "==", userId);
+		if (status) {
+			ordersRef = ordersRef.where("status", "==", status);
+		}
 		
+		const snapshot = await ordersRef.get();
+		let allOrders = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+		
+		allOrders.sort((a, b) => {
+			const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+			const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+			return timeB - timeA;
+		});
+		
+		const total = allOrders.length;
+		let paginatedOrders = allOrders.slice(skip, skip + limit);
+		
+		// Populate products
+		const rawProductIds = [...new Set(paginatedOrders.map(o => o.product))];
+		const productIds = rawProductIds.map(id => typeof id === 'string' ? id : (id._id || id.id || id.toString())).filter(Boolean);
+		if (productIds.length > 0) {
+			const productsMap = {};
+			for (let i = 0; i < productIds.length; i += 10) {
+				const batch = productIds.slice(i, i + 10);
+				if (batch.length > 0) {
+					const productsSnapshot = await db.collection("products").where("__name__", "in", batch).get();
+					productsSnapshot.forEach(doc => {
+						const data = doc.data();
+						productsMap[doc.id] = { _id: doc.id, title: data.title, thumbnail: data.thumbnail, slug: data.slug };
+					});
+				}
+			}
+
+			for (let i = 0; i < paginatedOrders.length; i++) {
+				const pId = paginatedOrders[i].product;
+				paginatedOrders[i].product = productsMap[pId] || { _id: pId, title: "Unknown" };
+			}
+		}
+
 		return NextResponse.json({
 			success: true,
-			orders,
+			orders: paginatedOrders,
 			pagination: {
 				page,
 				limit,
@@ -65,7 +85,7 @@ export async function GET(request) {
 // POST /api/orders - Create a new order
 export async function POST(request) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -74,12 +94,8 @@ export async function POST(request) {
 			);
 		}
 
-		await connectDB();
-		
-		// Parse request body
 		const { productId, productSnapshot, amount, finalAmount, currency, paymentMethod, couponCode, paymentStatus, status, deliveryStatus } = await request.json();
 
-		// Validate required fields
 		if (!productId || !finalAmount || !currency) {
 			return NextResponse.json(
 				{ success: false, message: "Missing required fields" },
@@ -87,11 +103,9 @@ export async function POST(request) {
 			);
 		}
 		
-		// If amount is not provided, use finalAmount
 		const orderAmount = amount || finalAmount;
 
-		// Verify product exists
-		const product = await Product.findById(productId);
+		const product = await getProductByIdOrSlug(productId);
 		if (!product) {
 			return NextResponse.json(
 				{ success: false, message: "Product not found" },
@@ -99,14 +113,12 @@ export async function POST(request) {
 			);
 		}
 
-		// Generate order ID
 		const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-		// Create order
-		const newOrder = new Order({
+		const newOrder = await createOrder({
 			orderId,
 			user: userId,
-			product: productId,
+			product: product._id,
 			productSnapshot: productSnapshot || {
 				title: product.title,
 				price: product.price,
@@ -120,22 +132,21 @@ export async function POST(request) {
 			paymentMethod,
 			paymentStatus: paymentStatus || "processing",
 			status: status || "processing",
-			deliveryStatus: deliveryStatus,
+			deliveryStatus: deliveryStatus || "processing",
 			couponCode: couponCode || null,
-			createdAt: new Date(),
 		});
 
-		await Product.findByIdAndUpdate(productId, { $inc: { salesCount: 1 } });
+		// Increment product salesCount
+		const { FieldValue } = require("firebase-admin/firestore");
+		await db.collection("products").doc(product._id).update({
+			salesCount: FieldValue.increment(1)
+		});
 
-		// send confirmation email to admin and customer 
-		
 		await sendEmail({
 			to: EMAIL,
 			subject: `New Order: ${product.title}`,
 			html: "<p>There is a new order for your product.</p><p>Order ID: " + orderId + "</p><p>Product: " + product.title + "</p><p>Amount: " + finalAmount + " " + currency + "</p>",
-		})
-
-		await newOrder.save();
+		}).catch(err => console.error("Email send warning: ", err));
 
 		return NextResponse.json({
 			success: true,

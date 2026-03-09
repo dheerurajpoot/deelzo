@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Coupon from "@/models/Coupon";
+import { db } from "@/lib/firebase/admin";
 
 export async function POST(request) {
   try {
-    await connectDB();
-    
     const body = await request.json();
     const { code, cartTotal, productCategory, productId } = body;
     
@@ -16,15 +13,25 @@ export async function POST(request) {
       );
     }
     
-    // Find coupon
-    const coupon = await Coupon.findOne({ 
-      code: code.toUpperCase(),
-      isActive: true,
-      validFrom: { $lte: new Date() },
-      validUntil: { $gte: new Date() }
-    });
+    const snapshot = await db.collection("coupons")
+      .where("code", "==", code.toUpperCase())
+      .where("isActive", "==", true)
+      .limit(1)
+      .get();
     
-    if (!coupon) {
+    if (snapshot.empty) {
+      return NextResponse.json(
+        { success: false, message: "Invalid or expired coupon code" },
+        { status: 400 }
+      );
+    }
+
+    const coupon = snapshot.docs[0].data();
+    const now = new Date();
+    const validFrom = coupon.validFrom?.toDate ? coupon.validFrom.toDate() : new Date(coupon.validFrom || 0);
+    const validUntil = coupon.validUntil?.toDate ? coupon.validUntil.toDate() : new Date(coupon.validUntil || Date.now() + 10000000);
+
+    if (now < validFrom || now > validUntil) {
       return NextResponse.json(
         { success: false, message: "Invalid or expired coupon code" },
         { status: 400 }
@@ -32,7 +39,7 @@ export async function POST(request) {
     }
     
     // Check usage limit
-    if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+    if (coupon.usageLimit && (coupon.usedCount || 0) >= coupon.usageLimit) {
       return NextResponse.json(
         { success: false, message: "Coupon usage limit exceeded" },
         { status: 400 }
@@ -40,7 +47,7 @@ export async function POST(request) {
     }
     
     // Check minimum amount
-    if (cartTotal < coupon.minimumAmount) {
+    if (cartTotal < (coupon.minimumAmount || 0)) {
       return NextResponse.json(
         { 
           success: false, 
@@ -51,7 +58,7 @@ export async function POST(request) {
     }
     
     // Check category restrictions
-    if (coupon.applicableCategories.length > 0 && productCategory) {
+    if (coupon.applicableCategories && coupon.applicableCategories.length > 0 && productCategory) {
       if (!coupon.applicableCategories.includes(productCategory)) {
         return NextResponse.json(
           { success: false, message: "Coupon not valid for this category" },
@@ -61,7 +68,7 @@ export async function POST(request) {
     }
     
     // Check product restrictions
-    if (coupon.applicableProducts.length > 0 && productId) {
+    if (coupon.applicableProducts && coupon.applicableProducts.length > 0 && productId) {
       if (!coupon.applicableProducts.includes(productId)) {
         return NextResponse.json(
           { success: false, message: "Coupon not valid for this product" },

@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Coupon from "@/models/Coupon";
-import User from "../../../../models/User";
+import { db } from "@/lib/firebase/admin";
+import { getCouponByIdOrCode, updateCoupon, deleteCoupon } from "@/lib/db/coupons";
+import { getUserById } from "@/lib/db/users";
+import { getDataFromToken } from "@/lib/auth";
 
 export async function GET(request, { params }) {
   try {
-    await connectDB();
+    const { id } = await params;
     
-    const coupon = await Coupon.findById(params.id);
+    const coupon = await getCouponByIdOrCode(id);
     
     if (!coupon) {
       return NextResponse.json(
@@ -32,9 +33,16 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    // Check if user is admin
     const userId = await getDataFromToken(request);
-    const user = await User.findById(userId).exec();
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const user = await getUserById(userId);
     if (!user || user.role !== "admin") {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -42,49 +50,36 @@ export async function PUT(request, { params }) {
       );
     }
     
-    await connectDB();
-    
+    const { id } = await params;
     const body = await request.json();
-    const { 
-      code, 
-      discountType, 
-      discountValue, 
-      minimumAmount, 
-      maximumDiscount, 
-      usageLimit, 
-      isActive, 
-      validUntil, 
-      applicableCategories, 
-      applicableProducts 
-    } = body;
     
-    const coupon = await Coupon.findById(params.id);
+    const couponParams = await getCouponByIdOrCode(id);
     
-    if (!coupon) {
+    if (!couponParams) {
       return NextResponse.json(
         { success: false, message: "Coupon not found" },
         { status: 404 }
       );
     }
     
-    // Update fields
-    if (code) coupon.code = code.toUpperCase();
-    if (discountType) coupon.discountType = discountType;
-    if (discountValue !== undefined) coupon.discountValue = discountValue;
-    if (minimumAmount !== undefined) coupon.minimumAmount = minimumAmount;
-    if (maximumDiscount !== undefined) coupon.maximumDiscount = maximumDiscount;
-    if (usageLimit !== undefined) coupon.usageLimit = usageLimit;
-    if (isActive !== undefined) coupon.isActive = isActive;
-    if (validUntil) coupon.validUntil = new Date(validUntil);
-    if (applicableCategories) coupon.applicableCategories = applicableCategories;
-    if (applicableProducts) coupon.applicableProducts = applicableProducts;
+    const updateData = {};
+    if (body.code) updateData.code = body.code.toUpperCase();
+    if (body.discountType) updateData.discountType = body.discountType;
+    if (body.discountValue !== undefined) updateData.discountValue = body.discountValue;
+    if (body.minimumAmount !== undefined) updateData.minimumAmount = body.minimumAmount;
+    if (body.maximumDiscount !== undefined) updateData.maximumDiscount = body.maximumDiscount;
+    if (body.usageLimit !== undefined) updateData.usageLimit = body.usageLimit;
+    if (body.isActive !== undefined) updateData.isActive = body.isActive;
+    if (body.validUntil) updateData.validUntil = new Date(body.validUntil);
+    if (body.applicableCategories) updateData.applicableCategories = body.applicableCategories;
+    if (body.applicableProducts) updateData.applicableProducts = body.applicableProducts;
     
-    await coupon.save();
+    const updatedCoupon = await updateCoupon(couponParams._id, updateData);
     
     return NextResponse.json({
       success: true,
       message: "Coupon updated successfully",
-      coupon
+      coupon: updatedCoupon
     });
     
   } catch (error) {
@@ -98,9 +93,16 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    // Check if user is admin
     const userId = await getDataFromToken(request);
-    const user = await User.findById(userId).exec();
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    
+    const user = await getUserById(userId);
     if (!user || user.role !== "admin") {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -108,16 +110,17 @@ export async function DELETE(request, { params }) {
       );
     }
     
-    await connectDB();
+    const { id } = await params;
+    const couponParams = await getCouponByIdOrCode(id);
     
-    const coupon = await Coupon.findByIdAndDelete(params.id);
-    
-    if (!coupon) {
+    if (!couponParams) {
       return NextResponse.json(
         { success: false, message: "Coupon not found" },
         { status: 404 }
       );
     }
+
+    await deleteCoupon(couponParams._id);
     
     return NextResponse.json({
       success: true,

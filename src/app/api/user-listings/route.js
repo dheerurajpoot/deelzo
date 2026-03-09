@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import connectDB from "@/lib/mongodb";
-import Listing from "@/models/Listing";
+import { db } from "@/lib/firebase/admin";
 import { getDataFromToken } from "@/lib/auth";
 
 export async function GET(request) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -14,12 +13,18 @@ export async function GET(request) {
 			);
 		}
 
-		await connectDB();
-
 		// Fetch all listings for the authenticated user
-		const listings = await Listing.find({ seller: userId })
-			.sort({ createdAt: -1 }) // Sort by newest first
-			.lean(); // Use lean() for better performance
+		const snapshot = await db.collection("listings")
+			.where("seller", "==", userId)
+			.get();
+
+		const listings = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+
+		listings.sort((a, b) => {
+			const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+			const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+			return timeB - timeA;
+		});
 
 		return NextResponse.json({
 			success: true,

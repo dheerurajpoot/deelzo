@@ -1,20 +1,18 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongodb";
-import Product from "@/models/Product";
-import Order from "@/models/Order";
+import { db } from "@/lib/firebase/admin";
+import { getProductByIdOrSlug } from "@/lib/db/products";
+import { createOrder } from "@/lib/db/orders";
 import { getDataFromToken } from "@/lib/auth";
 import Razorpay from "razorpay";
 
-// Initialize Razorpay
 const razorpay = new Razorpay({
 	key_id: process.env.RAZORPAY_KEY_ID,
 	key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// POST /api/payments/razorpay/create-order - Create Razorpay order
 export async function POST(request) {
 	try {
-		const userId = getDataFromToken(request);
+		const userId = await getDataFromToken(request);
 		
 		if (!userId) {
 			return NextResponse.json(
@@ -33,10 +31,7 @@ export async function POST(request) {
 			);
 		}
 
-		await connectDB();
-		
-		// Get product details
-		const product = await Product.findById(productId);
+		const product = await getProductByIdOrSlug(productId);
 		
 		if (!product) {
 			return NextResponse.json(
@@ -52,7 +47,6 @@ export async function POST(request) {
 			);
 		}
 		
-		// Check stock
 		if (product.stock !== -1 && product.stock <= 0) {
 			return NextResponse.json(
 				{ success: false, message: "Product is out of stock" },
@@ -60,7 +54,6 @@ export async function POST(request) {
 			);
 		}
 		
-		// Calculate final amount
 		let finalAmount = product.price;
 		let discountApplied = 0;
 		
@@ -68,34 +61,32 @@ export async function POST(request) {
 			discountApplied = product.comparePrice - product.price;
 		}
 		
-		// Convert to paise (Razorpay uses smallest currency unit)
 		const amountInPaise = Math.round(finalAmount * 100);
 		
-		// Create Razorpay order
 		const razorpayOrder = await razorpay.orders.create({
 			amount: amountInPaise,
-			currency: currency || product.currency, // Use user's currency if provided, otherwise use product currency
+			currency: currency || product.currency || 'INR',
 			receipt: `receipt_${Date.now()}`,
 			notes: {
 				productId: product._id.toString(),
-				userId: userId,
+				userId: userId.toString(),
 			},
 		});
 		
-		// Create order in database
-		const order = await Order.create({
+		const order = await createOrder({
+			orderId: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
 			user: userId,
 			product: product._id,
 			productSnapshot: {
 				title: product.title,
 				price: product.price,
 				comparePrice: product.comparePrice,
-				currency: currency || product.currency,
+				currency: currency || product.currency || 'INR',
 				category: product.category,
 				thumbnail: product.thumbnail,
 			},
 			amount: product.price,
-			currency: currency || product.currency,
+			currency: currency || product.currency || 'INR',
 			discountApplied,
 			finalAmount,
 			razorpay: {
@@ -112,7 +103,7 @@ export async function POST(request) {
 				id: order._id,
 				orderId: order.orderId,
 				amount: finalAmount,
-				currency: product.currency,
+				currency: product.currency || 'INR',
 			},
 			razorpay: {
 				orderId: razorpayOrder.id,
