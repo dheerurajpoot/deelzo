@@ -25,9 +25,7 @@ export async function createOrder(data: any) {
 	// Generate unique order ID if not present
 	let orderId = data.orderId;
 	if (!orderId) {
-		const timestamp = Date.now().toString(36).toUpperCase();
-		const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-		orderId = `ORD-${timestamp}-${random}`;
+		orderId = `ORD-${Date.now()}`;
 	}
 
 	const newOrder = {

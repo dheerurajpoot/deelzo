@@ -12,12 +12,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import {
 	ShoppingBag,
 	Loader2,
 	CheckCircle,
@@ -26,12 +20,14 @@ import {
 	Download,
 	Package,
 	IndianRupee,
-	Eye,
+	HelpCircle,
+	CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import Link from "next/link";
 import AdminSidebar from "@/components/admin-sidebar";
+import { useRouter } from "next/navigation";
 
 interface Order {
 	_id: string;
@@ -50,6 +46,8 @@ interface Order {
 	};
 	finalAmount: number;
 	currency: string;
+	paymentMethod?: string;
+	transactionId?: string;
 	paymentStatus:
 		| "pending"
 		| "completed"
@@ -72,8 +70,7 @@ export default function MyOrdersPage() {
 	const [orders, setOrders] = useState<Order[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [selectedStatus, setSelectedStatus] = useState<string>("all");
-	const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
-	const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+	const router = useRouter();
 
 	const fetchOrders = async () => {
 		try {
@@ -105,10 +102,10 @@ export default function MyOrdersPage() {
 						<CheckCircle size={12} /> Paid
 					</span>
 				);
-			case "pending":
+			case "processing":
 				return (
 					<span className='flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium'>
-						<Clock size={12} /> Pending
+						<Clock size={12} /> Processing
 					</span>
 				);
 			case "failed":
@@ -159,8 +156,6 @@ export default function MyOrdersPage() {
 		return (
 			order.paymentStatus === "completed" &&
 			order.deliveryStatus === "delivered"
-			// order.downloadExpiry &&
-			// new Date(order.downloadExpiry) > new Date()
 		);
 	};
 
@@ -270,7 +265,7 @@ export default function MyOrdersPage() {
 						{orders.map((order) => (
 							<Card
 								key={order._id}
-								className='bg-white border-slate-200 hover:shadow-lg transition-shadow'>
+								className='bg-white border-slate-200 hover:shadow-lg transition-shadow p-0'>
 								<CardContent className='p-6'>
 									<div className='flex flex-col md:flex-row gap-6'>
 										{/* Product Image */}
@@ -298,36 +293,55 @@ export default function MyOrdersPage() {
 										{/* Order Details */}
 										<div className='flex-1 min-w-0'>
 											<div className='flex flex-col md:flex-row md:items-start md:justify-between gap-4'>
-												<div>
+												<div className='flex-1 md:pr-4'>
 													<div className='flex items-center gap-3 mb-2'>
-														<span className='font-mono text-sm text-slate-500'>
-															{order.orderId}
+														<span className='font-mono text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md'>
+															#{order.orderId}
 														</span>
-														{getPaymentStatusBadge(
-															order.paymentStatus,
-														)}
+														<span className='text-sm text-slate-500 flex items-center gap-1.5'>
+															<Clock size={14} />
+															{formatDate(
+																order.createdAt,
+															)}
+														</span>
 													</div>
 													<h3 className='text-lg font-semibold text-slate-900 mb-1'>
 														{order.productSnapshot
 															?.title ||
 															"Product"}
 													</h3>
-													<p className='text-sm text-slate-500 mb-3'>
-														Ordered on{" "}
-														{formatDate(
-															order.createdAt,
-														)}
-													</p>
-													<div className='flex items-center gap-4'>
+													
+													<div className='flex items-center gap-2 mb-2'>
 														<span className='text-xl font-bold text-slate-900'>
-															{order.currency}{" "}
+															{order.currency === 'INR' ? '₹' : order.currency}{" "}
 															{order.finalAmount.toFixed(
 																2,
 															)}
 														</span>
-														{getOrderStatusBadge(
-															order.status,
-														)}
+													</div>
+
+													<div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-3 mt-4 border-t border-slate-100 bg-slate-50/50 rounded-lg p-3">
+														<div>
+															<p className="text-xs text-slate-500 mb-1 font-medium">Payment Method</p>
+															<p className="text-sm font-medium text-slate-900 capitalize flex items-center gap-1.5">
+																<CreditCard size={14} className="text-slate-400" />
+																{order.paymentMethod ? order.paymentMethod.replace(/_/g, ' ') : 'Online'}
+															</p>
+														</div>
+														<div>
+															<p className="text-xs text-slate-500 mb-1 font-medium">Transaction ID</p>
+															<p className="text-xs font-mono text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-200 inline-block max-w-[120px] md:max-w-[140px] truncate" title={order.transactionId || order.razorpay?.paymentId || 'N/A'}>
+																{order.transactionId || order.razorpay?.paymentId || 'N/A'}
+															</p>
+														</div>
+														<div>
+															<p className="text-xs text-slate-500 mb-1 font-medium">Payment Status</p>
+															<div className="inline-flex mt-0.5">{getPaymentStatusBadge(order.paymentStatus)}</div>
+														</div>
+														<div>
+															<p className="text-xs text-slate-500 mb-1 font-medium">Order Status</p>
+															<div className="inline-flex mt-0.5">{getOrderStatusBadge(order.status)}</div>
+														</div>
 													</div>
 												</div>
 
@@ -374,18 +388,13 @@ export default function MyOrdersPage() {
 														variant='ghost'
 														size='sm'
 														onClick={() => {
-															setViewingOrder(
-																order,
-															);
-															setIsViewDialogOpen(
-																true,
-															);
+															router.push("/contact");
 														}}>
-														<Eye
+														<HelpCircle
 															size={16}
 															className='mr-2'
 														/>
-														View Details
+														Contact Support
 													</Button>
 												</div>
 											</div>
@@ -396,154 +405,6 @@ export default function MyOrdersPage() {
 						))}
 					</div>
 				)}
-
-				{/* View Order Dialog */}
-				<Dialog
-					open={isViewDialogOpen}
-					onOpenChange={setIsViewDialogOpen}>
-					<DialogContent className='max-w-2xl'>
-						<DialogHeader>
-							<DialogTitle>Order Details</DialogTitle>
-						</DialogHeader>
-						{viewingOrder && (
-							<div className='space-y-6'>
-								{/* Order Header */}
-								<div className='flex items-center justify-between p-4 bg-slate-50 rounded-xl'>
-									<div>
-										<p className='text-sm text-slate-500'>
-											Order ID
-										</p>
-										<p className='font-mono font-medium text-slate-900'>
-											{viewingOrder.orderId}
-										</p>
-									</div>
-									<div className='text-right'>
-										<p className='text-sm text-slate-500'>
-											Status
-										</p>
-										{getOrderStatusBadge(
-											viewingOrder.status,
-										)}
-									</div>
-								</div>
-
-								{/* Product Details */}
-								<div className='flex gap-4'>
-									{viewingOrder.productSnapshot?.thumbnail ? (
-										<img
-											src={
-												viewingOrder.productSnapshot
-													.thumbnail
-											}
-											alt=''
-											className='w-24 h-24 rounded-xl object-cover'
-										/>
-									) : (
-										<div className='w-24 h-24 rounded-xl bg-slate-200 flex items-center justify-center'>
-											<Package
-												size={32}
-												className='text-slate-400'
-											/>
-										</div>
-									)}
-									<div className='flex-1'>
-										<h3 className='font-semibold text-slate-900 mb-1'>
-											{viewingOrder.productSnapshot
-												?.title || "N/A"}
-										</h3>
-										<div className='flex items-center gap-4'>
-											<span className='text-lg font-bold text-slate-900'>
-												{viewingOrder.currency}{" "}
-												{viewingOrder.finalAmount.toFixed(
-													2,
-												)}
-											</span>
-										</div>
-									</div>
-								</div>
-
-								{/* Payment Details */}
-								<div className='border-t border-slate-200 pt-4'>
-									<h4 className='font-medium text-slate-900 mb-3'>
-										Payment Details
-									</h4>
-									<div className='space-y-2 text-sm'>
-										<div className='flex justify-between'>
-											<span className='text-slate-500'>
-												Payment Status
-											</span>
-											{getPaymentStatusBadge(
-												viewingOrder.paymentStatus,
-											)}
-										</div>
-										{viewingOrder.paidAt && (
-											<div className='flex justify-between'>
-												<span className='text-slate-500'>
-													Paid On
-												</span>
-												<span className='text-slate-900'>
-													{formatDate(
-														viewingOrder.paidAt,
-													)}
-												</span>
-											</div>
-										)}
-									</div>
-								</div>
-
-								{/* Download Section */}
-								{isDownloadAvailable(viewingOrder) && (
-									<div className='border-t border-slate-200 pt-4'>
-										<h4 className='font-medium text-slate-900 mb-3'>
-											Download Product
-										</h4>
-										<div className='p-4 bg-emerald-50 rounded-xl'>
-											<div className='flex items-center justify-between'>
-												<div>
-													<p className='text-sm text-emerald-700 mb-1'>
-														Your product is ready
-														for download
-													</p>
-													<p className='text-xs text-emerald-600'>
-														Download expires on{" "}
-														{formatDate(
-															viewingOrder.downloadExpiry!,
-														)}
-													</p>
-												</div>
-												<Button
-													className='bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600'
-													onClick={() => {
-														toast.success(
-															"Download started!",
-														);
-													}}>
-													<Download
-														size={16}
-														className='mr-2'
-													/>
-													Download
-												</Button>
-											</div>
-										</div>
-									</div>
-								)}
-
-								{/* Support */}
-								<div className='border-t border-slate-200 pt-4'>
-									<p className='text-sm text-slate-500'>
-										Need help?{" "}
-										<Link
-											href='/contact'
-											className='text-orange-600 hover:underline'>
-											Contact Support
-										</Link>
-									</p>
-								</div>
-							</div>
-						)}
-					</DialogContent>
-				</Dialog>
 			</div>
 		</div>
 	);

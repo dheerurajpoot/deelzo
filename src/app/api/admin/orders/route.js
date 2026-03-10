@@ -54,7 +54,7 @@ export async function GET(request) {
 			totalRevenue: 0,
 			totalOrders: allOrders.length,
 			completedOrders: 0,
-			pendingOrders: 0,
+			processingOrders: 0,
 			failedOrders: 0,
 		};
 
@@ -62,8 +62,8 @@ export async function GET(request) {
 			if (o.paymentStatus === "completed") {
 				stats.completedOrders++;
 				stats.totalRevenue += (o.finalAmount || 0);
-			} else if (o.paymentStatus === "pending") {
-				stats.pendingOrders++;
+			} else if (o.status === "processing") {
+				stats.processingOrders++;
 			} else if (o.paymentStatus === "failed") {
 				stats.failedOrders++;
 			}
@@ -115,9 +115,27 @@ export async function GET(request) {
 			paginatedOrders[i].product = productsMap[pId] || { _id: pId, title: "Unknown" };
 		}
 
+		const serializeFirebaseData = (obj) => {
+			if (obj === null || obj === undefined) return obj;
+			if (typeof obj?.toDate === "function") return obj.toDate().toISOString();
+			if (typeof obj === "object" && obj._seconds !== undefined && obj._nanoseconds !== undefined) {
+				return new Date(obj._seconds * 1000).toISOString();
+			}
+			if (obj instanceof Date) return obj.toISOString();
+			if (Array.isArray(obj)) return obj.map(serializeFirebaseData);
+			if (typeof obj === "object") {
+				const res = {};
+				for (const key in obj) {
+					res[key] = serializeFirebaseData(obj[key]);
+				}
+				return res;
+			}
+			return obj;
+		};
+
 		return NextResponse.json({
 			success: true,
-			orders: paginatedOrders,
+			orders: serializeFirebaseData(paginatedOrders),
 			stats,
 			pagination: {
 				page,

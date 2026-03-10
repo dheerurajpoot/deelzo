@@ -82,7 +82,7 @@ interface Stats {
 	totalRevenue: number;
 	totalOrders: number;
 	completedOrders: number;
-	pendingOrders: number;
+	processingOrders: number;
 	failedOrders: number;
 }
 
@@ -92,7 +92,7 @@ export default function AdminOrdersPage() {
 		totalRevenue: 0,
 		totalOrders: 0,
 		completedOrders: 0,
-		pendingOrders: 0,
+		processingOrders: 0,
 		failedOrders: 0,
 	});
 	const [loading, setLoading] = useState(true);
@@ -140,7 +140,7 @@ export default function AdminOrdersPage() {
 				totalRevenue: 0,
 				totalOrders: 0,
 				completedOrders: 0,
-				pendingOrders: 0,
+				processingOrders: 0,
 				failedOrders: 0,
 			};
 
@@ -321,7 +321,7 @@ export default function AdminOrdersPage() {
 										Total Revenue
 									</p>
 									<p className='text-xl font-bold text-slate-900'>
-										{stats.totalRevenue.toFixed(2)}
+										${stats.totalRevenue.toFixed(2)}
 									</p>
 								</div>
 							</div>
@@ -375,10 +375,10 @@ export default function AdminOrdersPage() {
 								</div>
 								<div>
 									<p className='text-xs text-slate-500'>
-										Pending
+										Processing
 									</p>
 									<p className='text-xl font-bold text-slate-900'>
-										{stats.pendingOrders}
+										{stats.processingOrders}
 									</p>
 								</div>
 							</div>

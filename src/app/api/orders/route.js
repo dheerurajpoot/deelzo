@@ -63,9 +63,27 @@ export async function GET(request) {
 			}
 		}
 
+		const serializeFirebaseData = (obj) => {
+			if (obj === null || obj === undefined) return obj;
+			if (typeof obj?.toDate === "function") return obj.toDate().toISOString();
+			if (typeof obj === "object" && obj._seconds !== undefined && obj._nanoseconds !== undefined) {
+				return new Date(obj._seconds * 1000).toISOString();
+			}
+			if (obj instanceof Date) return obj.toISOString();
+			if (Array.isArray(obj)) return obj.map(serializeFirebaseData);
+			if (typeof obj === "object") {
+				const res = {};
+				for (const key in obj) {
+					res[key] = serializeFirebaseData(obj[key]);
+				}
+				return res;
+			}
+			return obj;
+		};
+
 		return NextResponse.json({
 			success: true,
-			orders: paginatedOrders,
+			orders: serializeFirebaseData(paginatedOrders),
 			pagination: {
 				page,
 				limit,
@@ -94,7 +112,7 @@ export async function POST(request) {
 			);
 		}
 
-		const { productId, productSnapshot, amount, finalAmount, currency, paymentMethod, couponCode, paymentStatus, status, deliveryStatus } = await request.json();
+		const { productId, productSnapshot, amount, finalAmount, currency, paymentMethod, couponCode, paymentStatus, status, transactionId, deliveryStatus } = await request.json();
 
 		if (!productId || !finalAmount || !currency) {
 			return NextResponse.json(
@@ -113,7 +131,7 @@ export async function POST(request) {
 			);
 		}
 
-		const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+		const orderId = `ORD-${Date.now()}`;
 
 		const newOrder = await createOrder({
 			orderId,
@@ -134,6 +152,7 @@ export async function POST(request) {
 			status: status || "processing",
 			deliveryStatus: deliveryStatus || "processing",
 			couponCode: couponCode || null,
+			transactionId: transactionId || null,
 		});
 
 		// Increment product salesCount
