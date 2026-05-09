@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import axios from "axios";
 import { userContext } from "@/context/userContext";
 import { toast } from "sonner";
 import { listingService } from "@/services/listingService";
@@ -555,7 +554,7 @@ export default function EditListing() {
 			const submitData = {
 				...formData,
 				price: Number.parseFloat(formData.price),
-				userId: user?._id,
+				seller: user?._id,
 				metrics: {
 					...formData.metrics,
 					assetLink: formData.metrics.assetLink

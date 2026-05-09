@@ -31,7 +31,6 @@ import {
 import AdminSidebar from "@/components/admin-sidebar";
 import { userContext } from "@/context/userContext";
 import { toast } from "sonner";
-import axios from "axios";
 import { userService } from "@/services/userService";
 
 export default function AdminUsersPage() {
@@ -50,11 +49,7 @@ export default function AdminUsersPage() {
 			try {
 				if (!user) return;
 				setLoading(true);
-                
-                // Fetch all users
                 const allUsers = await userService.getAllUsers();
-                
-                // 1. Filter
                 let filtered = allUsers;
                 if (searchTerm) {
                     const term = searchTerm.toLowerCase();
@@ -73,7 +68,6 @@ export default function AdminUsersPage() {
                     filtered = filtered.filter(u => u.isBlocked);
                 }
 
-                // 2. Stats (Simple calculation)
                 const stats = {
                     totalUsers: allUsers.length,
                     verifiedUsers: allUsers.filter(u => u.verified).length,

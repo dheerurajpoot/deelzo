@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -31,13 +31,9 @@ import {
   Calendar,
   Layers,
   CheckCircle2,
-  Clock,
-  AlertCircle,
-  Users,
   ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
 import { couponService } from "@/services/couponService";
 import AdminSidebar from "@/components/admin-sidebar";
 
@@ -184,8 +180,8 @@ export default function CouponsAdminPage() {
       maximumDiscount: coupon.maximumDiscount?.toString() || "",
       usageLimit: coupon.usageLimit?.toString() || "",
       validUntil: coupon.validUntil.split("T")[0],
-      applicableCategories: coupon.applicableCategories.join(", "),
-      applicableProducts: coupon.applicableProducts.join(", "),
+      applicableCategories: coupon.applicableCategories?.join(", ") || "",
+      applicableProducts: coupon.applicableProducts?.join(", ") || "",
     });
     setShowEditDialog(true);
   };
@@ -412,11 +408,11 @@ export default function CouponsAdminPage() {
                                     </div>
                                 )}
 
-                                {(coupon.applicableCategories.length > 0 || coupon.applicableProducts.length > 0) && (
+                                {((coupon.applicableCategories?.length > 0) || (coupon.applicableProducts?.length > 0)) && (
                                     <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg text-blue-700 text-[11px] font-bold overflow-hidden">
                                         <Layers size={12} className="shrink-0" />
                                         <span className="truncate">
-                                            Valid for {coupon.applicableCategories.length || coupon.applicableProducts.length} specific rules
+                                            Valid for {coupon.applicableCategories?.length || coupon.applicableProducts?.length} specific rules
                                         </span>
                                     </div>
                                 )}

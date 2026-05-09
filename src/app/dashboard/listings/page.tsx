@@ -20,7 +20,6 @@ import {
   Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import axios from 'axios';
 import { userContext } from '@/context/userContext';
 import { listingService } from '@/services/listingService';
 
@@ -132,9 +131,10 @@ export default function ListingsPage() {
   };
 
   const filteredListings = listings.filter(listing => {
-    const matchesSearch = listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         listing.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         listing.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = (listing.title?.toLowerCase() || "").includes(searchLower) ||
+                         (listing.description?.toLowerCase() || "").includes(searchLower) ||
+                         (listing.category?.toLowerCase() || "").includes(searchLower);
     
     const matchesStatus = filterStatus === 'all' || listing.status === filterStatus;
     

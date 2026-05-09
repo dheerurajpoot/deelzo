@@ -56,7 +56,12 @@ export const listingService = {
             listings = listings.filter(l => l.featured === true);
         }
         if (filters.seller) {
-            listings = listings.filter(l => l.seller === filters.seller);
+            listings = listings.filter(l => 
+                l.seller === filters.seller || 
+                l.seller?._id === filters.seller || 
+                l.userId === filters.seller || 
+                l.userId?._id === filters.seller
+            );
         }
 
         // Sorting

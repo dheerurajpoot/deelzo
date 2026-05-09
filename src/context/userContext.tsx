@@ -50,7 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
 			try {
 				if (firebaseUser) {
-					const userData = await userService.getUser(firebaseUser.uid);
+					let userData = await userService.getUser(firebaseUser.uid);
+                    
+                    // Fallback to email if user not found by UID (migrated users)
+                    if (!userData && firebaseUser.email) {
+                        userData = await userService.getUserByEmail(firebaseUser.email);
+                        // Optional: Link the UID to this user record if found
+                    }
+                    
 					setUser(userData);
                     
                     // Sync cookies for middleware if not already set

@@ -26,7 +26,6 @@ import { userContext } from "@/context/userContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "@/components/admin-sidebar";
-import axios from "axios";
 import { blogService } from "@/services/blogService";
 
 export default function UserBlogsPage() {
@@ -42,7 +41,7 @@ export default function UserBlogsPage() {
 		try {
             const allBlogs = await blogService.getBlogs();
             // Filter blogs for current user
-            const userBlogs = allBlogs.filter(b => b.author?._id === user._id);
+            const userBlogs = allBlogs.filter(b => b.author === user._id || b.author?._id === user._id);
             setBlogs(userBlogs);
 		} catch (error) {
 			console.error("Failed to fetch blogs:", error);
@@ -85,7 +84,7 @@ export default function UserBlogsPage() {
 
 	useEffect(() => {
 		fetchBlogs();
-	}, [user]);
+	}, [user?._id]);
 
 	const handleDelete = async (id: string) => {
 		if (!confirm("Are you sure you want to delete this blog?")) return;

@@ -27,9 +27,9 @@ import {
 } from "lucide-react";
 import { userContext } from "@/context/userContext";
 import { toast } from "sonner";
-import axios from "axios";
 import { userService } from "@/services/userService";
 import { listingService } from "@/services/listingService";
+import { orderService } from "@/services/orderService";
 import { blogService } from "@/services/blogService";
 import Image from "next/image";
 import AdminSidebar from "@/components/admin-sidebar";
@@ -38,6 +38,7 @@ export default function Dashboard() {
 	const { user } = userContext();
 	const [profile, setProfile] = useState<any>();
 	const [listings, setListings] = useState([]);
+	const [orders, setOrders] = useState([]);
 	const [blogs, setBlogs] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [recentActivity, setRecentActivity] = useState<any[]>([]);
@@ -46,12 +47,14 @@ export default function Dashboard() {
 		try {
 			if (!user) return;
 
-            const [userData, userListings] = await Promise.all([
+            const [userData, userListings, userOrders] = await Promise.all([
                 userService.getUser(user._id),
-                listingService.getListings({ seller: user._id })
+                listingService.getListings({ seller: user._id }),
+                orderService.getUserOrders(user._id)
             ]);
 			setProfile(userData);
 			setListings(userListings.listings as any || []);
+            setOrders(userOrders as any || []);
 		} catch (error) {
 			console.error("Failed to fetch dashboard data:", error);
 		}
@@ -61,7 +64,7 @@ export default function Dashboard() {
 		try {
 			if (!user) return;
             const allBlogs = await blogService.getBlogs();
-            const userBlogs = allBlogs.filter(b => b.author?._id === user._id);
+            const userBlogs = allBlogs.filter(b => b.author === user._id || b.author?._id === user._id);
 			setBlogs(userBlogs as any);
 		} catch (err) {
 			console.log(err);
@@ -88,7 +91,7 @@ export default function Dashboard() {
 			setLoading(false);
 		};
 		loadData();
-	}, [user]);
+	}, [user?._id]);
 
 	if (loading) {
 		return (

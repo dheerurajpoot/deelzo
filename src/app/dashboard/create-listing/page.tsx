@@ -458,7 +458,7 @@ export default function CreateListing() {
 			const submitData = {
 				...formData,
 				price: Number.parseFloat(formData.price),
-				userId: user?._id,
+				seller: user?._id,
 				metrics: {
 					...formData.metrics,
 					assetLink: formData.metrics.assetLink

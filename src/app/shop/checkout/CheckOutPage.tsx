@@ -37,7 +37,6 @@ import { PHONE } from "@/lib/constant";
 import { productService } from "@/services/productService";
 import { couponService } from "@/services/couponService";
 import { orderService } from "@/services/orderService";
-import { cartService } from "@/services/cartService";
 
 interface Product {
 	_id: string;
@@ -139,7 +138,7 @@ export default function CheckoutComponent() {
 		if (!couponCode.trim()) return;
 		try {
 			setIsVerifyingCoupon(true);
-            const coupon = await couponService.getCoupon(couponCode);
+            const coupon = await couponService.getCouponByCode(couponCode);
 
 			if (coupon) {
                 // Manually calculate coupon discount (Clean & Simple)

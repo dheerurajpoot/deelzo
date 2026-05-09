@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
 	Select,
 	SelectContent,
@@ -24,10 +23,8 @@ import {
 	Eye,
 	Loader2,
 	CheckCircle,
-	XCircle,
 	Clock,
 	Package,
-	RefreshCw,
 	DollarSign,
 	CreditCard,
 	Zap,
@@ -35,11 +32,8 @@ import {
 	Edit3,
 	Trash2,
 	User,
-	Hash,
-	Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
 import { orderService } from "@/services/orderService";
 import AdminSidebar from "@/components/admin-sidebar";
 import InvoiceGenerator from "@/components/InvoiceGenerator";
@@ -323,9 +317,9 @@ export default function AdminOrdersPage() {
 													</td>
 													<td className='px-8 py-6'>
 														<div className='flex items-center gap-4'>
-															<div className='w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex-shrink-0 overflow-hidden relative'>
+															<div className='w-12 h-12 rounded-md bg-slate-50 border border-slate-100 flex-shrink-0 overflow-hidden relative'>
 																{items[0]?.snapshot?.thumbnail ? (
-																	<Image fill src={items[0].snapshot.thumbnail} alt="" className="object-cover" />
+																	<Image fill src={items[0].snapshot.thumbnail} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" alt={items[0].snapshot.title} className="object-cover" />
 																) : (
 																	<div className="w-full h-full flex items-center justify-center text-slate-200"><Package size={20} /></div>
 																)}
@@ -381,7 +375,7 @@ export default function AdminOrdersPage() {
 
 				{/* Viewing Dialog */}
 				<Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-					<DialogContent className='max-w-2xl rounded-[3rem] p-0 border-0 shadow-2xl overflow-hidden bg-white'>
+					<DialogContent className='max-w-2xl rounded-[2rem] p-0 border-0 shadow-2xl overflow-hidden bg-white'>
 						<DialogHeader className="p-10 pb-4 flex flex-row items-center justify-between border-b border-slate-50">
 							<div className="flex items-center gap-4">
 								<div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center">
@@ -418,13 +412,13 @@ export default function AdminOrdersPage() {
 
 								<div className="space-y-4">
 									<p className="text-[10px] font-black text-slate-900 uppercase tracking-widest px-2">Itemized Breakdown</p>
-									<div className="bg-white border border-slate-200/60 rounded-[2.5rem] overflow-hidden">
+									<div className="bg-white border border-slate-200/60 rounded-[2rem] overflow-hidden">
 										<div className="divide-y divide-slate-50">
 											{getOrderItems(viewingOrder).map((item, idx) => (
 												<div key={idx} className="flex items-center gap-6 p-6 group transition-colors hover:bg-slate-50/50">
-													<div className="w-16 h-16 rounded-2xl bg-slate-50 flex-shrink-0 overflow-hidden border border-slate-100 relative">
+													<div className="w-16 h-16 rounded-md bg-slate-50 flex-shrink-0 overflow-hidden border border-slate-100 relative">
 														{item.snapshot.thumbnail ? (
-															<Image fill src={item.snapshot.thumbnail} alt="" className="object-cover group-hover:scale-110 transition-transform duration-500" />
+															<Image fill src={item.snapshot.thumbnail} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" alt={item.snapshot.title} className="object-cover group-hover:scale-110 transition-transform duration-500" />
 														) : <div className="w-full h-full flex items-center justify-center text-slate-200"><ShoppingCart size={24} /></div>}
 													</div>
 													<div className="flex-1">

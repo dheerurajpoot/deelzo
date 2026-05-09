@@ -31,7 +31,6 @@ import {
 	Shield,
 } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
 import { orderService } from "@/services/orderService";
 import { getDownloadUrl } from "@/app/actions/productActions";
 import Link from "next/link";
@@ -103,7 +102,7 @@ export default function MyOrdersPage() {
 
 	useEffect(() => {
 		fetchOrders();
-	}, [selectedStatus]);
+	}, [selectedStatus, user?._id]);
 
 	const getStatusBadge = (status: string) => {
 		const colors = {
