@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
 	ShoppingCart,
 	Trash2,
@@ -14,7 +13,6 @@ import {
 	ShieldCheck,
 	Zap,
 	Download,
-	CreditCard,
 	Loader2,
 } from "lucide-react";
 import Image from "next/image";

@@ -28,7 +28,6 @@ import {
 	Loader2,
 	X,
 } from "lucide-react";
-import axios from "axios";
 import { productService } from "@/services/productService";
 
 interface Product {

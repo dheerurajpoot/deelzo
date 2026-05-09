@@ -37,14 +37,9 @@ import {
 	X,
 	DollarSign,
 	TrendingUp,
-	BarChart3,
 	Layers,
 	Zap,
 	ShoppingBag,
-	Tag,
-	ArrowRight,
-	ExternalLink,
-	RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";

@@ -20,13 +20,10 @@ import {
 	Package,
 	BarChart3,
 	Wallet,
-	Award,
 	Sparkles,
 	Target,
-	Zap,
 } from "lucide-react";
 import { userContext } from "@/context/userContext";
-import { toast } from "sonner";
 import { userService } from "@/services/userService";
 import { listingService } from "@/services/listingService";
 import { orderService } from "@/services/orderService";

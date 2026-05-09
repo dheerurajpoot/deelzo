@@ -7,7 +7,6 @@ import {
 	useEffect,
 	type ReactNode,
 } from "react";
-import axios from "axios";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
 import { userService } from "@/services/userService";
