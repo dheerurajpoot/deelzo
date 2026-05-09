@@ -32,7 +32,6 @@ import {
 	Link as LinkIcon,
 	ArrowUpRight,
 } from "lucide-react";
-import axios from "axios";
 import { userContext } from "@/context/userContext";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -792,7 +791,7 @@ export default function ListingDetail({
 						</Card>
 
 						{/* Recent Bids */}
-						{listing.bids && listing.bids.length > 0 && (
+						{bids && bids.length > 0 && (
 							<Card className='bg-white border border-slate-200 shadow-lg'>
 								<CardHeader className='border-b border-slate-200'>
 									<CardTitle className='text-slate-900 text-lg font-bold flex items-center gap-2'>
@@ -800,20 +799,19 @@ export default function ListingDetail({
 											size={20}
 											className='text-cyan-600'
 										/>
-										Recent Bids ({listing.bids.length})
+										Recent Bids ({bids.length})
 									</CardTitle>
 								</CardHeader>
 								<CardContent className='pt-6'>
 									<div className='space-y-3 max-h-96 overflow-y-auto pr-2'>
-										{listing.bids.map((bid: any) => (
+										{bids.map((bid: any) => (
 											<div
 												key={bid._id}
 												className='p-4 bg-slate-50 rounded-xl border border-slate-200 hover:border-sky-300 hover:bg-slate-100 transition-all duration-200'>
 												<div className='flex items-start justify-between mb-2'>
 													<div className='flex-1 min-w-0'>
 														<p className='font-bold text-slate-900 text-sm mb-1'>
-															{bid.bidder?.name ||
-																"Anonymous"}
+															{bid.bidder?.name || bid.bidderName || "Anonymous"}
 														</p>
 														<div className='flex items-center gap-2 mb-2'>
 															<p className='font-medium flex items-center gap-1 text-slate-700 text-xs'>
@@ -1140,7 +1138,7 @@ export default function ListingDetail({
 											: "N/A"}
 									</span>
 								</div>
-								{listing.bids && listing.bids.length > 0 && (
+								{bids && bids.length > 0 && (
 									<div className='flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100'>
 										<span className='text-slate-600 flex items-center gap-2 font-medium text-sm'>
 											<MessageCircle
@@ -1150,7 +1148,7 @@ export default function ListingDetail({
 											Bids
 										</span>
 										<span className='font-bold text-slate-900 text-lg'>
-											{listing.bids.length}
+											{bids.length}
 										</span>
 									</div>
 								)}

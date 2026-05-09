@@ -23,6 +23,20 @@ export const bidService = {
         snapshot.forEach((child) => {
             bids.push({ _id: child.key, ...child.val() });
         });
-        return bids.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        // Populate bidder info
+        const { userService } = await import("./userService");
+        const populatedBids = await Promise.all(bids.map(async (bid) => {
+            if (typeof bid.bidder === 'string') {
+                const bidderData = await userService.getUser(bid.bidder);
+                return {
+                    ...bid,
+                    bidder: bidderData ? { _id: bid.bidder, name: bidderData.name, phone: bidderData.phone } : { _id: bid.bidder, name: bid.bidderName || "Anonymous", phone: "Hidden" }
+                };
+            }
+            return bid;
+        }));
+
+        return populatedBids.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
 };

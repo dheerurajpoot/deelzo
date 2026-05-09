@@ -27,7 +27,6 @@ import {
 	Clock,
 } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
 import { productService } from "@/services/productService";
 import { userContext } from "@/context/userContext";
 import { useCart } from "@/context/CartContext";
@@ -106,6 +105,27 @@ export default function ProductDetailPage() {
             const foundProduct = await productService.getProduct(slug);
 
 			if (foundProduct) {
+                // Normalize reviews from object to array if needed
+                if (foundProduct.reviews && !Array.isArray(foundProduct.reviews)) {
+                    foundProduct.reviews = Object.values(foundProduct.reviews);
+                }
+
+                // Populate user names for legacy reviews where user is just an ID
+                if (foundProduct.reviews) {
+                    const { userService } = await import("@/services/userService");
+                    const normalizedReviews = await Promise.all(foundProduct.reviews.map(async (review: any) => {
+                        if (typeof review.user === 'string') {
+                            const userData = await userService.getUser(review.user);
+                            return {
+                                ...review,
+                                user: userData ? { _id: review.user, name: userData.name } : { _id: review.user, name: "Verified Buyer" }
+                            };
+                        }
+                        return review;
+                    }));
+                    foundProduct.reviews = normalizedReviews;
+                }
+
 				setProduct(foundProduct as any);
 			} else {
 				toast.error("Product not found");

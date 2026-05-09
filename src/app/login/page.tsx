@@ -14,9 +14,7 @@ import {
 	Eye,
 	EyeOff,
 	AlertCircle,
-	Shield,
 } from "lucide-react";
-import axios from "axios";
 import { toast } from "sonner";
 import Image from "next/image";
 import { auth } from "@/lib/firebase";
