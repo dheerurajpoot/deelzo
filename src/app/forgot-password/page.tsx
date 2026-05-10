@@ -11,10 +11,8 @@ import {
 	CheckCircle,
 	AlertCircle,
 	ArrowLeft,
-	Shield,
 	Key,
 } from "lucide-react";
-import Image from "next/image";
 
 export default function ForgotPasswordPage() {
 	const [email, setEmail] = useState("");
@@ -43,13 +41,6 @@ export default function ForgotPasswordPage() {
 		<div className='min-h-[calc(100vh-80px)] flex bg-white'>
 			{/* Left Side - Form */}
 			<div className='w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-20 xl:px-28 py-12'>
-				{/* Logo */}
-				<div className='mb-6'>
-					<div className='flex items-center gap-2'>
-						<Image src="/plogo.png" alt="Deelzo Logo" width={132} height={32} />
-					</div>
-				</div>
-
 				{submitted ? (
 					<div className='text-center'>
 						<div className='w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6'>

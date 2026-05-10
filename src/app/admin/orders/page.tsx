@@ -69,6 +69,7 @@ interface Order {
 	finalAmount: number;
 	currency: string;
 	paymentStatus: string;
+	deliveryStatus?: string;
 	status: string;
 	transactionId?: string;
 	paymentMethod?: string;
@@ -104,6 +105,8 @@ export default function AdminOrdersPage() {
 	const [updatingOrder, setUpdatingOrder] = useState<Order | null>(null);
 	const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
 	const [newStatus, setNewStatus] = useState<string>("");
+	const [newPaymentStatus, setNewPaymentStatus] = useState<string>("");
+	const [newDeliveryStatus, setNewDeliveryStatus] = useState<string>("");
 	const [updateLoading, setUpdateLoading] = useState(false);
 
 	const fetchOrders = async () => {
@@ -198,15 +201,28 @@ export default function AdminOrdersPage() {
 	};
 
 	const handleUpdateStatus = async () => {
-		if (!updatingOrder || !newStatus) return;
+		if (!updatingOrder) return;
 		try {
 			setUpdateLoading(true);
-            await orderService.updateOrder(updatingOrder._id, { status: newStatus });
-			toast.success("Status updated");
+            
+            const updates: any = { 
+                status: newStatus,
+                paymentStatus: newPaymentStatus,
+                deliveryStatus: newDeliveryStatus
+            };
+            
+            // Auto-complete if order status changed to completed but others are still pending/processing
+            if (newStatus === 'completed' && updatingOrder.status !== 'completed') {
+                updates.paymentStatus = 'completed';
+                updates.deliveryStatus = 'completed';
+            }
+
+            await orderService.updateOrder(updatingOrder._id, updates);
+			toast.success("Statuses synchronized successfully");
 			setIsUpdateDialogOpen(false);
 			fetchOrders();
 		} catch (error) {
-			toast.error("Update failed");
+			toast.error("Status synchronization failed");
 		} finally {
 			setUpdateLoading(false);
 		}
@@ -355,7 +371,13 @@ export default function AdminOrdersPage() {
 															<Button size='icon' variant='ghost' onClick={() => { setViewingOrder(order); setIsViewDialogOpen(true); }} className="hover:bg-slate-100 rounded-xl">
 																<Eye size={18} className="text-slate-400" />
 															</Button>
-															<Button size='icon' variant='ghost' onClick={() => { setUpdatingOrder(order); setNewStatus(order.status); setIsUpdateDialogOpen(true); }} className="hover:bg-blue-50 hover:text-blue-600 rounded-xl">
+															<Button size='icon' variant='ghost' onClick={() => { 
+                                                                setUpdatingOrder(order); 
+                                                                setNewStatus(order.status); 
+                                                                setNewPaymentStatus(order.paymentStatus);
+                                                                setNewDeliveryStatus(order.deliveryStatus || 'pending');
+                                                                setIsUpdateDialogOpen(true); 
+                                                            }} className="hover:bg-blue-50 hover:text-blue-600 rounded-xl">
 																<Edit3 size={18} />
 															</Button>
 															<Button size='icon' variant='ghost' onClick={() => { setDeletingOrder(order); setIsDeleteDialogOpen(true); }} className="hover:bg-rose-50 hover:text-rose-600 rounded-xl">
@@ -403,6 +425,10 @@ export default function AdminOrdersPage() {
 									<div>
 										<p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment</p>
 										<div className="flex">{getStatusBadge(viewingOrder.paymentStatus, "payment")}</div>
+									</div>
+									<div>
+										<p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Delivery</p>
+										<div className="flex">{getStatusBadge(viewingOrder.deliveryStatus || 'pending', "order")}</div>
 									</div>
 									<div>
 										<p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Placement Date</p>
@@ -481,18 +507,51 @@ export default function AdminOrdersPage() {
 							<DialogTitle className="text-xl font-black text-slate-900 tracking-tight">Modify Entitlement</DialogTitle>
 						</DialogHeader>
 						<div className="space-y-6 pt-4">
-							<Select value={newStatus} onValueChange={setNewStatus}>
-								<SelectTrigger className="h-14 rounded-2xl border-0 bg-slate-50 font-black text-xs tracking-widest">
-									<SelectValue placeholder="SET NEW STATUS" />
-								</SelectTrigger>
-								<SelectContent className="rounded-2xl border-0 shadow-2xl">
-									<SelectItem value='pending'>PENDING</SelectItem>
-									<SelectItem value='processing'>PROCESSING</SelectItem>
-									<SelectItem value='completed'>COMPLETED</SelectItem>
-									<SelectItem value='cancelled'>CANCELLED</SelectItem>
-									<SelectItem value='refunded'>REFUNDED</SelectItem>
-								</SelectContent>
-							</Select>
+							<div className="space-y-2">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Global Status</p>
+                                <Select value={newStatus} onValueChange={setNewStatus}>
+                                    <SelectTrigger className="h-14 rounded-2xl border-0 bg-slate-50 font-black text-xs tracking-widest">
+                                        <SelectValue placeholder="SET NEW STATUS" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-2xl border-0 shadow-2xl">
+                                        <SelectItem value='pending'>PENDING</SelectItem>
+                                        <SelectItem value='processing'>PROCESSING</SelectItem>
+                                        <SelectItem value='completed'>COMPLETED</SelectItem>
+                                        <SelectItem value='cancelled'>CANCELLED</SelectItem>
+                                        <SelectItem value='refunded'>REFUNDED</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Finance Status</p>
+                                <Select value={newPaymentStatus} onValueChange={setNewPaymentStatus}>
+                                    <SelectTrigger className="h-14 rounded-2xl border-0 bg-slate-50 font-black text-xs tracking-widest">
+                                        <SelectValue placeholder="SET FINANCE STATUS" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-2xl border-0 shadow-2xl">
+                                        <SelectItem value='processing'>PROCESSING</SelectItem>
+                                        <SelectItem value='completed'>COMPLETED</SelectItem>
+                                        <SelectItem value='failed'>FAILED</SelectItem>
+                                        <SelectItem value='refunded'>REFUNDED</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Delivery Status</p>
+                                <Select value={newDeliveryStatus} onValueChange={setNewDeliveryStatus}>
+                                    <SelectTrigger className="h-14 rounded-2xl border-0 bg-slate-50 font-black text-xs tracking-widest">
+                                        <SelectValue placeholder="SET DELIVERY STATUS" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-2xl border-0 shadow-2xl">
+                                        <SelectItem value='pending'>PENDING</SelectItem>
+                                        <SelectItem value='processing'>PROCESSING</SelectItem>
+                                        <SelectItem value='completed'>COMPLETED</SelectItem>
+                                        <SelectItem value='failed'>FAILED</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 							<Button onClick={handleUpdateStatus} disabled={updateLoading || !newStatus} className="w-full py-8 rounded-[1.5rem] bg-slate-900 hover:bg-slate-800 text-white font-black uppercase tracking-widest">
 								{updateLoading ? <Loader2 className="animate-spin" /> : "Commit Changes"}
 							</Button>

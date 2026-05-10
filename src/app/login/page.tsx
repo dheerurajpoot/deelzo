@@ -16,7 +16,6 @@ import {
 	AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import Image from "next/image";
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { loginAction } from "@/app/actions/authActions";
@@ -80,13 +79,6 @@ export default function Login() {
 		<div className='min-h-[calc(100vh-80px)] flex bg-white'>
 			{/* Left Side - Form */}
 			<div className='w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-20 xl:px-28 py-12'>
-				{/* Logo */}
-				<div className='mb-6'>
-					<div className='flex items-center gap-2'>
-						<Image src="/plogo.png" alt="Deelzo Logo" width={132} height={32} />
-					</div>
-				</div>
-
 				{/* Heading */}
 				<div className='mb-10'>
 					<h2 className='text-4xl font-bold text-slate-900 mb-4'>

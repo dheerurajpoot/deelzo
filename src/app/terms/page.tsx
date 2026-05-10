@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Check, CheckCircle, XCircle, Shield, Mail, MessageCircle } from "lucide-react";
 
+import { EMAIL, PHONE } from "@/lib/constant";
+
 export const metadata: Metadata = {
 	title: "Terms of Service",
 	description:
@@ -103,11 +105,11 @@ export default function Terms() {
 									</li>
 									<li className='flex items-start gap-2'>
 										<Check size={18} className='text-emerald-500 flex-shrink-0 mt-0.5' />
-										<span>5% platform fee applied to all transactions</span>
+										<span>Standard platform fees applied to all transactions</span>
 									</li>
 									<li className='flex items-start gap-2'>
 										<Check size={18} className='text-emerald-500 flex-shrink-0 mt-0.5' />
-										<span>Refunds subject to our 30-day return policy</span>
+										<span>All digital sales are final and non-refundable</span>
 									</li>
 								</ul>
 							</div>
@@ -120,11 +122,11 @@ export default function Terms() {
 									</li>
 									<li className='flex items-start gap-2'>
 										<Check size={18} className='text-emerald-500 flex-shrink-0 mt-0.5' />
-										<span>95% of sale price goes to sellers after fees</span>
+										<span>Sellers receive full payment after platform fees</span>
 									</li>
 									<li className='flex items-start gap-2'>
 										<Check size={18} className='text-emerald-500 flex-shrink-0 mt-0.5' />
-										<span>Must provide accurate product information</span>
+										<span>Must provide high-quality, authentic products</span>
 									</li>
 								</ul>
 							</div>
@@ -184,74 +186,44 @@ export default function Terms() {
 						</div>
 					</section>
 
-					{/* Return Policy */}
+					{/* Digital Sales Policy */}
 					<section className='bg-white rounded-2xl border border-slate-200 p-8 shadow-lg'>
 						<h2 className='text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3'>
 							<div className='w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center'>
 								<span className='text-white font-bold text-lg'>5</span>
 							</div>
-							Return Policy
+							Digital Sales Policy
 						</h2>
 						<div className='space-y-6'>
-							<div className='bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-6'>
+							<div className='bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200 rounded-xl p-6'>
 								<div className='flex items-center gap-3 mb-3'>
-									<Shield size={24} className='text-emerald-600' />
-									<h3 className='text-xl font-bold text-slate-900'>30-Day Money Back Guarantee</h3>
+									<XCircle size={24} className='text-rose-600' />
+									<h3 className='text-xl font-bold text-slate-900'>Final Sale Policy</h3>
 								</div>
 								<p className='text-slate-700 mb-4'>
-									We offer a 30-day satisfaction guarantee on all digital products purchased through our platform.
+									Due to the nature of digital products, all sales made on Deelzo are final. Once a digital asset is purchased, it is considered used and non-returnable.
 								</p>
 								<div className='grid md:grid-cols-3 gap-4 text-sm'>
 									<div className='bg-white rounded-lg p-3'>
-										<p className='font-semibold text-slate-900'>Full Refund</p>
-										<p className='text-slate-600'>Within 30 days of purchase</p>
+										<p className='font-semibold text-slate-900'>No Refunds</p>
+										<p className='text-slate-600'>After digital access is granted</p>
 									</div>
 									<div className='bg-white rounded-lg p-3'>
-										<p className='font-semibold text-slate-900'>No Reason Required</p>
-										<p className='text-slate-600'>Simple return process</p>
+										<p className='font-semibold text-slate-900'>No Exchanges</p>
+										<p className='text-slate-600'>For different products</p>
 									</div>
 									<div className='bg-white rounded-lg p-3'>
-										<p className='font-semibold text-slate-900'>Quick Processing</p>
-										<p className='text-slate-600'>Refunded within 48 hours</p>
+										<p className='font-semibold text-slate-900'>Immediate Access</p>
+										<p className='text-slate-600'>Products delivered instantly</p>
 									</div>
 								</div>
 							</div>
 							
-							<div className='grid md:grid-cols-2 gap-6'>
-								<div>
-									<h4 className='font-semibold text-slate-900 mb-3'>Eligibility Requirements</h4>
-									<ul className='space-y-2 text-slate-600'>
-										<li className='flex items-start gap-2'>
-											<Check size={18} className='text-emerald-500 flex-shrink-0 mt-0.5' />
-											<span>Request made within 30 days of purchase</span>
-										</li>
-										<li className='flex items-start gap-2'>
-											<Check size={18} className='text-emerald-500 flex-shrink-0 mt-0.5' />
-											<span>Original files must be unused</span>
-										</li>
-										<li className='flex items-start gap-2'>
-											<Check size={18} className='text-emerald-500 flex-shrink-0 mt-0.5' />
-											<span>Valid proof of purchase required</span>
-										</li>
-									</ul>
-								</div>
-								<div>
-									<h4 className='font-semibold text-slate-900 mb-3'>Non-Refundable Items</h4>
-									<ul className='space-y-2 text-slate-600'>
-										<li className='flex items-start gap-2'>
-											<XCircle size={18} className='text-rose-500 flex-shrink-0 mt-0.5' />
-											<span>Partially used or modified products</span>
-										</li>
-										<li className='flex items-start gap-2'>
-											<XCircle size={18} className='text-rose-500 flex-shrink-0 mt-0.5' />
-											<span>Products used for commercial purposes</span>
-										</li>
-										<li className='flex items-start gap-2'>
-											<XCircle size={18} className='text-rose-500 flex-shrink-0 mt-0.5' />
-											<span>Digital content that has been downloaded</span>
-										</li>
-									</ul>
-								</div>
+							<div className='bg-slate-50 border border-slate-200 rounded-xl p-6'>
+								<h4 className='font-bold text-slate-900 mb-3 uppercase tracking-widest text-xs'>Customer Acknowledgement</h4>
+								<p className='text-slate-600 text-sm leading-relaxed'>
+									By completing a purchase on Deelzo, you acknowledge that you have reviewed the product details, requirements, and compatibility. You explicitly waive any right to a refund or exchange due to "change of mind", "unsuitability", or "accidental purchase". In the rare event of a verified technical defect that cannot be resolved, store credit may be issued at our sole discretion.
+								</p>
 							</div>
 						</div>
 					</section>
@@ -335,7 +307,7 @@ export default function Terms() {
 										</div>
 										<div>
 											<p className='font-medium text-slate-900'>Email Support</p>
-											<p className='text-slate-600 text-sm'>support@deelzo.com</p>
+											<p className='text-slate-600 text-sm'>{EMAIL}</p>
 										</div>
 									</div>
 									<div className='flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-200'>
@@ -344,7 +316,7 @@ export default function Terms() {
 										</div>
 										<div>
 											<p className='font-medium text-slate-900'>WhatsApp</p>
-											<p className='text-slate-600 text-sm'>+1 (555) 123-4567</p>
+											<p className='text-slate-600 text-sm'>{PHONE}</p>
 										</div>
 									</div>
 								</div>

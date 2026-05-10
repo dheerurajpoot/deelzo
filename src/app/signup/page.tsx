@@ -20,7 +20,6 @@ import {
 import { toast } from "sonner";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
-import Image from "next/image";
 import { auth } from "@/lib/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { loginAction } from "@/app/actions/authActions";
@@ -68,21 +67,21 @@ export default function SignUp() {
 		formData.phone = phone;
 
 		try {
-            // 1. Create user with Firebase Auth
-            const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-            const user = userCredential.user;
-            const idToken = await user.getIdToken();
+			// 1. Create user with Firebase Auth
+			const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+			const user = userCredential.user;
+			const idToken = await user.getIdToken();
 
-            // 2. Create user profile in RTDB
-            await userService.createUserProfile(user.uid, {
-                name: formData.name,
-                email: formData.email,
-                phone: formData.phone,
-                role: 'user'
-            });
+			// 2. Create user profile in RTDB
+			await userService.createUserProfile(user.uid, {
+				name: formData.name,
+				email: formData.email,
+				phone: formData.phone,
+				role: 'user'
+			});
 
-            // 3. Call Server Action to set cookies (auto-login after signup)
-            const result = await loginAction(idToken);
+			// 3. Call Server Action to set cookies (auto-login after signup)
+			const result = await loginAction(idToken);
 
 			if (result.success) {
                 const userData = await userService.getUser(user.uid);
@@ -106,13 +105,6 @@ export default function SignUp() {
 		<div className='min-h-[calc(100vh-80px)] flex bg-white'>
 			{/* Left Side - Form */}
 			<div className='w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-20 xl:px-28 py-12'>
-				{/* Logo */}
-				<div className='mb-6'>
-					<div className='flex items-center gap-2'>
-						<Image src="/plogo.png" alt="Deelzo Logo" width={132} height={32} />
-					</div>
-				</div>
-
 				{/* Heading */}
 				<div className='mb-10'>
 					<h2 className='text-4xl font-bold text-slate-900 mb-4'>

@@ -266,11 +266,11 @@ export default function MyOrdersPage() {
 
 				{/* Refined Modular Detail Modal */}
 				<Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-					<DialogContent className='max-w-2xl rounded-[2.5rem] p-0 border-0 shadow-2xl overflow-hidden bg-white'>
+					<DialogContent className='max-w-2xl rounded-[2rem] p-0 border-0 shadow-2xl overflow-hidden bg-white'>
 						{viewingOrder && (
 							<div className="flex flex-col h-full max-h-[90vh]">
 								{/* Sticky Modal Header */}
-								<div className="p-8 pb-6 border-b border-slate-50 flex items-center justify-between">
+								<div className="p-4 md:p-8 pb-2 border-b border-slate-50 flex items-center justify-between">
 									<div className="flex items-center gap-4">
 										<div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
 											<CheckCircle size={20} />
@@ -286,7 +286,7 @@ export default function MyOrdersPage() {
 								</div>
 
 								{/* Scrollable Content */}
-								<div className="p-8 space-y-10 overflow-y-auto no-scrollbar pb-12">
+								<div className="p-4 md:p-8 space-y-10 overflow-y-auto no-scrollbar pb-12">
 									{/* Info Strip */}
 									<div className="grid grid-cols-2 sm:grid-cols-4 gap-6 p-6 bg-slate-50/50 rounded-3xl border border-slate-100">
 										<div className="space-y-1">
@@ -308,7 +308,7 @@ export default function MyOrdersPage() {
 									</div>
 
 									{/* Item Breakdown */}
-									<div className="space-y-4">
+									<div className="space-y-2">
 										<div className="flex items-center justify-between px-2">
 											<p className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Digital Licenses</p>
 											<p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{getOrderItems(viewingOrder).length} POSITIONS</p>
@@ -345,7 +345,7 @@ export default function MyOrdersPage() {
 									</div>
 
 									{/* Total Financial Block */}
-									<div className="bg-slate-900 rounded-[2.5rem] p-8 sm:p-10 text-white relative overflow-hidden shadow-2xl">
+									<div className="bg-slate-900 rounded-[2rem] m-0 p-4 md:p-10 text-white relative overflow-hidden shadow-2xl">
 										<div className="absolute top-0 right-0 p-8 opacity-5 scale-150 rotate-12"><Shield size={100} /></div>
 										<div className="flex flex-col sm:flex-row justify-between items-end gap-6 relative z-10">
 											<div>

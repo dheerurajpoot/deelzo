@@ -1,196 +1,156 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
-import { Shield, Clock, CreditCard, FileText, Mail, Phone } from "lucide-react";
-import Image from "next/image";
+import { Shield, Clock, AlertTriangle, FileText, Mail, Phone, Zap, XCircle, CheckCircle } from "lucide-react";
 import type { Metadata } from "next";
 import { EMAIL, PHONE } from "@/lib/constant";
 
 export const metadata: Metadata = {
-  title: "Refund Policy",
-  description: "Learn about Deelzo's refund policy for digital assets and services.",
+  title: "Refund Policy | Deelzo",
+  description: "Learn about Deelzo's strictly no-refund policy for digital assets and software products.",
 };
 
 export default function RefundPolicy() {
   const policySections = [
     {
-      title: "General Policy",
-      icon: FileText,
-      content: "Our refund policy applies to digital assets purchased through the Deelzo platform. Due to the nature of digital products, refunds are subject to specific conditions outlined below. All refund requests must be made within the specified timeframes and meet the eligibility criteria."
+      title: "Digital Nature",
+      icon: Zap,
+      content: "All products sold on Deelzo are digital in nature (scripts, software, templates, tools). Unlike physical goods, digital assets are permanently accessible once purchased and cannot be 'returned' in the traditional sense."
     },
     {
-      title: "Eligibility Criteria",
+      title: "No-Refund Policy",
+      icon: XCircle,
+      content: "Due to the non-tangible and irrevocable nature of digital downloads, Deelzo maintains a strict NO REFUND policy once a purchase is completed. By making a purchase, you acknowledge and agree to this condition."
+    },
+    {
+      title: "Access Protection",
       icon: Shield,
-      content: "Refunds may be granted under the following circumstances: (1) Technical issues preventing access to the purchased asset that cannot be resolved within 48 hours, (2) Misrepresentation of the asset's features or capabilities as described in the listing, (3) Unauthorized access to your account resulting in unauthorized purchases, or (4) Duplicate purchases made accidentally within 24 hours."
+      content: "We ensure that you receive full access to the product you purchased. If there is a technical failure on our end preventing your download or access, our support team will resolve it within 24-48 hours."
     },
     {
-      title: "Non-Eligible Cases",
-      icon: Clock,
-      content: "Refunds are generally not provided for: (1) Change of mind after purchase, (2) Failure to review asset details before purchase, (3) Issues arising from buyer's own technical setup or hosting environment, (4) Assets that have been downloaded or accessed by the buyer, or (5) Purchases made more than 7 days ago."
-    },
-    {
-      title: "Refund Process",
-      icon: CreditCard,
-      content: "To request a refund, contact our support team within 7 days of purchase with your order details and reason for refund. Our team will review your request and respond within 2-3 business days. If approved, refunds will be processed to the original payment method within 5-10 business days, though processing times may vary depending on your financial institution."
+      title: "Pre-Purchase Duty",
+      icon: FileText,
+      content: "It is the buyer's responsibility to review product descriptions, live demos, requirements, and compatibility before purchase. 'Change of mind' or 'accidental purchase' does not qualify for a refund."
     }
   ];
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100'>
-      {/* Hero Section */}
-      <div className='relative overflow-hidden bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900 py-16 md:py-20'>
-        <div className='absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl' />
-        <div className='absolute bottom-0 left-0 w-96 h-96 bg-white/5 rounded-full blur-3xl' />
-        <div className='max-w-4xl mx-auto px-4 md:px-8 text-center relative z-10'>
-          <h1 className='text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4'>
-            Refund Policy
+    <div className='min-h-screen bg-white'>
+      {/* Premium Hero Section */}
+      <div className='relative overflow-hidden bg-slate-900 py-20 md:py-32'>
+        <div className='absolute top-0 right-0 w-[500px] h-[500px] bg-orange-500/10 rounded-full blur-[120px]' />
+        <div className='absolute bottom-0 left-0 w-[500px] h-[500px] bg-rose-500/10 rounded-full blur-[120px]' />
+        
+        <div className='max-w-5xl mx-auto px-4 md:px-8 text-center relative z-10'>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/60 text-xs font-bold uppercase tracking-widest mb-8">
+            <Shield size={14} className="text-orange-500" />
+            Terms of Purchase
+          </div>
+          <h1 className='text-4xl md:text-6xl font-black text-white mb-6 tracking-tight'>
+            Refund <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-rose-400">Policy</span>
           </h1>
-          <p className='text-white/90 text-lg md:text-xl max-w-3xl mx-auto'>
-            Understand our fair and transparent refund policy designed to protect both buyers and sellers on our platform.
+          <p className='text-white/60 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed'>
+            Transparency is key to our marketplace. Please read our digital product return guidelines carefully before completing your transaction.
           </p>
         </div>
       </div>
 
-      {/* Content */}
-      <div className='max-w-6xl mx-auto px-4 md:px-8 py-12 md:py-16'>
-        {/* Policy Summary Card */}
-        <Card className='bg-white border border-slate-200 shadow-lg mb-12'>
-          <CardContent className='p-8'>
-            <div className='flex items-start gap-4 mb-6'>
-              <div className='w-12 h-12 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center shrink-0'>
-                <Shield size={24} className='text-white' />
+      {/* Main Content */}
+      <div className='max-w-6xl mx-auto px-4 md:px-8 -mt-16 pb-24 relative z-20'>
+        
+        {/* Core Notice Card */}
+        <Card className='bg-white border-0 shadow-2xl rounded-[2.5rem] overflow-hidden mb-12'>
+          <CardContent className='p-8 md:p-12'>
+            <div className='flex flex-col md:flex-row items-center gap-8'>
+              <div className='w-24 h-24 rounded-[2rem] bg-rose-50 flex items-center justify-center shrink-0 border border-rose-100'>
+                <AlertTriangle size={40} className='text-rose-500' />
               </div>
-              <div>
-                <h2 className='text-2xl md:text-3xl font-bold text-slate-900 mb-3'>
-                  Our Commitment to Fairness
+              <div className="text-center md:text-left">
+                <h2 className='text-2xl md:text-4xl font-black text-slate-900 mb-4 tracking-tight'>
+                  Strict No-Refund Policy
                 </h2>
-                <p className='text-slate-600 leading-relaxed text-base md:text-lg'>
-                  At Deelzo, we strive to maintain a balance between protecting buyers from misrepresented assets 
-                  and ensuring sellers are fairly compensated for legitimate transactions. Our refund policy reflects 
-                  this commitment to fairness and transparency.
+                <p className='text-slate-500 leading-relaxed text-base md:text-xl'>
+                  Since Deelzo offers non-tangible, irrevocable digital products, we <span className="text-slate-900 font-bold underline decoration-rose-500/30">do not issue refunds</span> once the order is accomplished and the product is sent or downloaded. As a customer, you are responsible for understanding this upon purchasing any item at our site.
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Policy Sections */}
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-16'>
+        {/* Policy Grid */}
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-16'>
           {policySections.map((section, index) => {
             const Icon = section.icon;
             return (
-              <Card 
+              <div 
                 key={index}
-                className='bg-white border border-slate-200 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1'
+                className='group bg-slate-50/50 border border-slate-100 rounded-[2rem] p-8 hover:bg-white hover:shadow-xl transition-all duration-500'
               >
-                <CardContent className='p-6 md:p-8'>
-                  <div className='w-12 h-12 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center mb-4'>
-                    <Icon size={24} className='text-white' />
-                  </div>
-                  <h3 className='text-xl font-bold text-slate-900 mb-3'>
-                    {section.title}
-                  </h3>
-                  <p className='text-slate-600 leading-relaxed'>
-                    {section.content}
-                  </p>
-                </CardContent>
-              </Card>
+                <div className='w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center mb-6 group-hover:scale-110 transition-transform'>
+                  <Icon size={28} className='text-slate-900' />
+                </div>
+                <h3 className='text-xl font-black text-slate-900 mb-3'>
+                  {section.title}
+                </h3>
+                <p className='text-slate-500 leading-relaxed font-medium'>
+                  {section.content}
+                </p>
+              </div>
             );
           })}
         </div>
 
-        {/* Detailed Policy */}
-        <Card className='bg-white border border-slate-200 shadow-lg mb-12'>
-          <CardContent className='p-8'>
-            <h2 className='text-2xl md:text-3xl font-bold text-slate-900 mb-6'>
-              Detailed Refund Conditions
-            </h2>
-            
-            <div className='space-y-6'>
-              <div>
-                <h3 className='text-lg font-semibold text-slate-800 mb-3'>Digital Asset Refunds</h3>
-                <ul className='list-disc pl-5 space-y-2 text-slate-600'>
-                  <li>Digital assets that have not been downloaded or accessed may be eligible for refund within 7 days of purchase</li>
-                  <li>Assets that have been downloaded or used are generally not eligible for refunds</li>
-                  <li>If an asset doesn't match its description, a refund may be issued after verification</li>
-                  <li>Refunds for digital assets are processed within 5-10 business days</li>
-                </ul>
-              </div>
-              
-              <div>
-                <h3 className='text-lg font-semibold text-slate-800 mb-3'>Service-Based Purchases</h3>
-                <ul className='list-disc pl-5 space-y-2 text-slate-600'>
-                  <li>Services that have not commenced may be eligible for full refund within 7 days</li>
-                  <li>Services in progress may be eligible for partial refund based on work completed</li>
-                  <li>Completed services are generally not eligible for refunds</li>
-                  <li>All service refund requests require detailed justification</li>
-                </ul>
-              </div>
-              
-              <div>
-                <h3 className='text-lg font-semibold text-slate-800 mb-3'>Technical Issues</h3>
-                <ul className='list-disc pl-5 space-y-2 text-slate-600'>
-                  <li>Refunds due to technical issues require proof of the problem</li>
-                  <li>Buyers must allow reasonable time for technical issues to be resolved</li>
-                  <li>If issues persist beyond 48 hours, refund eligibility increases</li>
-                  <li>We may require remote access to troubleshoot before approving refunds</li>
-                </ul>
-              </div>
+        {/* Exceptions & Support */}
+        <div className="grid lg:grid-cols-3 gap-8 mb-16">
+          <div className="lg:col-span-2 space-y-8">
+            <h2 className='text-3xl font-black text-slate-900 tracking-tight'>Exceptions to the Rule</h2>
+            <div className="space-y-4">
+              {[
+                { title: "Technical Non-Functionality", desc: "If the product is completely non-functional and the seller cannot provide a fix within 7 days, a store credit may be issued at our discretion." },
+                { title: "Misleading Descriptions", desc: "If the product significantly differs from the description and live demo provided on the product page." },
+                { title: "Non-Delivery", desc: "If you fail to receive the download link or license key due to a mailing issue from our side." }
+              ].map((item, i) => (
+                <div key={i} className="flex gap-4 p-6 bg-white border border-slate-100 rounded-2xl">
+                  <div className="mt-1"><CheckCircle size={20} className="text-emerald-500" /></div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 mb-1">{item.title}</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Contact Section */}
-        <Card className='bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 shadow-lg'>
-          <CardContent className='p-8'>
-            <h2 className='text-2xl md:text-3xl font-bold text-slate-900 mb-6 text-center'>
-              Need Assistance with a Refund?
-            </h2>
-            <p className='text-slate-600 text-center mb-8 max-w-2xl mx-auto'>
-              Our support team is ready to assist you with any refund requests or questions about our policy.
-            </p>
+          <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white flex flex-col justify-between">
+            <div>
+              <Mail className="text-orange-400 mb-6" size={32} />
+              <h3 className="text-2xl font-black mb-4 tracking-tight">Need Support?</h3>
+              <p className="text-white/60 text-sm leading-relaxed mb-8">
+                If you encounter any issues with your purchase, our support team is available to assist with technical troubleshooting.
+              </p>
+            </div>
             
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-              <div className='text-center p-6 bg-white rounded-xl border border-slate-200'>
-                <Mail size={24} className='text-slate-700 mx-auto mb-3' />
-                <h3 className='font-semibold text-slate-800 mb-2'>Email Support</h3>
-                <p className='text-slate-600'>{EMAIL}</p>
+            <div className="space-y-4">
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Email Registry</p>
+                <p className="text-sm font-bold">{EMAIL}</p>
               </div>
-              
-              <div className='text-center p-6 bg-white rounded-xl border border-slate-200'>
-                <Phone size={24} className='text-slate-700 mx-auto mb-3' />
-                <h3 className='font-semibold text-slate-800 mb-2'>Phone Support</h3>
-                <p className='text-slate-600'>{PHONE}</p>
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Instant Contact</p>
+                <p className="text-sm font-bold">{PHONE}</p>
               </div>
-              
-              <div className='text-center p-6 bg-white rounded-xl border border-slate-200'>
-                <FileText size={24} className='text-slate-700 mx-auto mb-3' />
-                <h3 className='font-semibold text-slate-800 mb-2'>Submit Request</h3>
-                <Link href="/contact" className='text-emerald-600 hover:underline font-medium'>
-                  Contact Form
-                </Link>
-              </div>
+              <Link href="/contact" className="block w-full py-4 bg-gradient-to-r from-orange-500 to-rose-500 rounded-2xl text-center font-black uppercase text-xs tracking-widest hover:opacity-90 transition-opacity">
+                Contact Helpdesk
+              </Link>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Important Notice */}
-        <Card className='bg-amber-50 border border-amber-200 shadow-lg mt-8'>
-          <CardContent className='p-6 md:p-8'>
-            <div className='flex items-start gap-4'>
-              <div className='w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0'>
-                <FileText size={24} className='text-amber-700' />
-              </div>
-              <div>
-                <h3 className='text-lg font-bold text-amber-800 mb-2'>Important Notice</h3>
-                <p className='text-amber-700'>
-                  This refund policy is subject to change. Please review this page periodically for updates. 
-                  Continued use of our services constitutes acceptance of any changes to this policy. 
-                  For specific questions about your situation, please contact our support team directly.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Final Disclaimer */}
+        <div className='text-center'>
+          <p className='text-slate-400 text-sm font-medium'>
+            By continuing with your purchase on Deelzo, you agree to these terms. Last updated: May 2026.
+          </p>
+        </div>
       </div>
     </div>
   );
