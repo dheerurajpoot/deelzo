@@ -377,7 +377,7 @@ export default function ListingsPage() {
         </div>
 
         {/* Mobile Card View */}
-        <div className="lg:hidden space-y-4">
+        <div className="lg:hidden mb-16 space-y-4">
           {loading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, index) => (

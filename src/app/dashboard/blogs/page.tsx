@@ -17,11 +17,8 @@ import {
 	CheckCircle,
 	Clock,
 	XCircle,
-	Eye,
 	Search,
-	Filter,
 } from "lucide-react";
-import Image from "next/image";
 import { userContext } from "@/context/userContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -350,7 +347,7 @@ export default function UserBlogsPage() {
           </div>
 
           {/* Mobile Card View */}
-          <div className="lg:hidden space-y-4">
+          <div className="lg:hidden mb-16 space-y-4">
             {loading ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, index) => (

@@ -51,7 +51,7 @@ export default function CartPage() {
 	}
 
 	return (
-		<div className='min-h-screen bg-slate-50/50 py-12'>
+		<div className='min-h-screen bg-slate-50/50 py-6 md:py-12'>
 			<div className='max-w-7xl mx-auto px-4 md:px-6 lg:px-8'>
 				<div className='flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10'>
 					<div>
@@ -69,13 +69,13 @@ export default function CartPage() {
 					</div>
 				</div>
 
-				<div className='grid lg:grid-cols-3 gap-10'>
+				<div className='grid lg:grid-cols-3 gap-3 md:gap-10'>
 					{/* Cart Items List */}
 					<div className='lg:col-span-2 space-y-6'>
 						{cart.map((item) => (
 							<div key={item._id} className='relative bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 transition-all hover:border-sky-200 hover:shadow-xl hover:shadow-sky-500/5 group'>
 								<div className='flex items-center gap-6'>
-									<div className='relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 bg-slate-50 rounded-2xl overflow-hidden border border-slate-100'>
+									<div className='relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0 bg-slate-50 rounded-md overflow-hidden border border-slate-100'>
 										{item.thumbnail ? (
 											<Image
 												src={item.thumbnail}
@@ -97,7 +97,7 @@ export default function CartPage() {
 													{item.category}
 												</p>
 												<Link href={`/shop/${item.slug}`}>
-													<h3 className='text-xl font-bold text-slate-900 hover:text-sky-600 transition-colors leading-tight'>
+													<h3 className='text-sm md:text-xl font-bold text-slate-900 hover:text-sky-600 transition-colors leading-tight'>
 														{item.title}
 													</h3>
 												</Link>
@@ -112,13 +112,13 @@ export default function CartPage() {
 										
 										<div className='flex items-center justify-between mt-6'>
 											<div className='flex gap-4'>
-												<div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
+												{/* <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
 													<ShieldCheck size={14} className="text-emerald-500" />
 													LIFETIME LICENSE
-												</div>
+												</div> */}
 												<div className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
 													<Zap size={14} className="text-amber-500" />
-													INSTANT
+													INSTANT DOWNLOAD
 												</div>
 											</div>
 											<div className='text-2xl font-black text-slate-900'>
@@ -131,7 +131,7 @@ export default function CartPage() {
 							</div>
 						))}
 
-						<Link href='/shop' className='inline-flex items-center text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors py-4 group'>
+						<Link href='/shop' className='inline-flex items-center text-sm font-bold text-slate-400 hover:text-slate-900 transition-colors py-2 group'>
 							<ArrowLeft size={16} className='mr-2 group-hover:-translate-x-1 transition-transform' />
 							CONTINUE SHOPPING
 						</Link>
@@ -177,7 +177,7 @@ export default function CartPage() {
 
 									<div className='grid grid-cols-3 gap-4 mt-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-500'>
 										<Image src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="Paypal" width={60} height={20} className="mx-auto" />
-										<Image src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" width={60} height={20} className="mx-auto" />
+										<Image src="https://upload.wikimedia.org/wikipedia/commons/5/5c/Visa_Inc._logo_%282021%E2%80%93present%29.svg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original" alt="Visa" width={60} height={20} className="mx-auto" />
 										<Image src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" width={60} height={20} className="mx-auto" />
 									</div>
 								</div>

@@ -706,9 +706,9 @@ export default function CheckoutComponent() {
 					<div className='p-4 space-y-4'>
 						<div className='bg-slate-50/50 rounded-2xl p-2 relative'>
 							<div className="flex flex-col items-center">
-								<div className='bg-white p-2 rounded-[2.5rem] shadow-xl shadow-slate-200/50 mb-3 border border-slate-100'>
+								{/* <div className='bg-white p-2 rounded-[2.5rem] shadow-xl shadow-slate-200/50 mb-3 border border-slate-100'>
 									<Image src={paymentDetails.binanceQrUrl} alt='QR' width={180} height={180} className='rounded-2xl opacity-90' />
-								</div>
+								</div> */}
 								
 								<div className='w-full space-y-2'>
 									<p className='text-[10px] font-black text-slate-400 uppercase tracking-widest text-center'>Recipient Wallet Address</p>

@@ -274,7 +274,7 @@ export default function ShopPage() {
 							)}
 						</div>
 					) : (
-						<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
+						<div className='grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6'>
 							{products.map((product) => (
 								<ProductCard
 									key={product._id}
@@ -329,9 +329,9 @@ function ProductCard({ product }: { product: Product }) {
 	return (
 		<Link href={`/shop/${product.slug}`}>
 			<Card
-				className={`group bg-white border-slate-200 overflow-hidden p-0 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 cursor-pointer ${product.isFeatured ? "ring-2 ring-emerald-500/20" : ""}`}>
+				className={`group flex gap-0 bg-white border-slate-200 overflow-hidden p-0 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 cursor-pointer ${product.isFeatured ? "ring-2 ring-emerald-500/20" : ""}`}>
 				{/* Image */}
-				<div className='relative h-48 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200'>
+				<div className='relative h-36 md:h-48 overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200'>
 					{product.thumbnail ? (
 						<img
 							src={product.thumbnail}
@@ -355,7 +355,7 @@ function ProductCard({ product }: { product: Product }) {
 					)}
 
 					{/* Badges */}
-					<div className='absolute top-3 left-3 flex flex-col gap-2'>
+					<div className='absolute top-3 left-3 flex gap-2'>
 						{discount > 0 && (
 							<Badge className='bg-gradient-to-r from-rose-500 to-red-500 text-white border-0 shadow-lg shadow-rose-500/30'>
 								-{discount}%
@@ -376,12 +376,12 @@ function ProductCard({ product }: { product: Product }) {
 					</div>
 
 					{/* Category Badge */}
-					<div className='absolute top-3 right-3'>
+					{/* <div className='absolute top-3 right-3'>
 						<div
 							className={`px-3 py-1 rounded-full bg-gradient-to-r ${getCategoryColor(product.category)} text-white text-xs font-medium shadow-lg`}>
 							{product.category}
 						</div>
-					</div>
+					</div> */}
 
 					{/* Hover Overlay */}
 					<div className='absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4'>
@@ -392,24 +392,24 @@ function ProductCard({ product }: { product: Product }) {
 					</div>
 				</div>
 
-				<CardContent className='p-5'>
+				<CardContent className='p-3 md:p-5'>
 					{/* Category */}
 					<p className='text-xs text-slate-500 uppercase tracking-wide mb-2'>
 						{product.category}
 					</p>
 
 					{/* Title */}
-					<h3 className='font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors'>
+					<h3 className='text-sm md:text-base font-bold text-slate-900 mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors'>
 						{product.title}
 					</h3>
 
 					{/* Description */}
-					<p className='text-sm text-slate-600 line-clamp-2 mb-4'>
+					<p className='text-xs md:text-sm text-slate-600 line-clamp-2 mb-2 md:mb-4'>
 						{product.shortDescription || product.description}
 					</p>
 
 					{/* Rating & Sales */}
-					<div className='flex items-center gap-4 mb-4'>
+					<div className='flex items-center gap-2 md:gap-4 mb-2 md:mb-4'>
 						<div className='flex items-center gap-1'>
 							<Star
 								size={14}
@@ -430,7 +430,7 @@ function ProductCard({ product }: { product: Product }) {
 
 					{/* Price */}
 					<div className='flex items-baseline gap-2'>
-						<span className='text-xl font-bold text-slate-900'>
+						<span className='text-base md:text-xl font-bold text-slate-900'>
 							{product.currency} {product.price}
 						</span>
 						{product.comparePrice && product.comparePrice > 0 && (
@@ -445,25 +445,25 @@ function ProductCard({ product }: { product: Product }) {
 	);
 }
 
-function getCategoryColor(categoryValue: string) {
-	const colors: Record<string, string> = {
-		script: "from-blue-500 to-indigo-500",
-		tool: "from-emerald-500 to-teal-500",
-		course: "from-amber-500 to-orange-500",
-		service: "from-rose-500 to-pink-500",
-		template: "from-violet-500 to-purple-500",
-		ebook: "from-cyan-500 to-sky-500",
-		wordpress: "from-slate-500 to-slate-600",
-		react: "from-blue-400 to-cyan-400",
-		nextjs: "from-slate-600 to-slate-800",
-		nodejs: "from-green-500 to-emerald-500",
-		python: "from-yellow-500 to-amber-500",
-		php: "from-indigo-400 to-purple-400",
-		automation: "from-orange-400 to-red-400",
-		seo: "from-emerald-400 to-teal-400",
-		marketing: "from-pink-400 to-rose-400",
-		adsense: "from-blue-500 to-blue-600",
-		monetization: "from-green-500 to-teal-500",
-	};
-	return colors[categoryValue] || "from-slate-500 to-slate-600";
-}
+// function getCategoryColor(categoryValue: string) {
+// 	const colors: Record<string, string> = {
+// 		script: "from-blue-500 to-indigo-500",
+// 		tool: "from-emerald-500 to-teal-500",
+// 		course: "from-amber-500 to-orange-500",
+// 		service: "from-rose-500 to-pink-500",
+// 		template: "from-violet-500 to-purple-500",
+// 		ebook: "from-cyan-500 to-sky-500",
+// 		wordpress: "from-slate-500 to-slate-600",
+// 		react: "from-blue-400 to-cyan-400",
+// 		nextjs: "from-slate-600 to-slate-800",
+// 		nodejs: "from-green-500 to-emerald-500",
+// 		python: "from-yellow-500 to-amber-500",
+// 		php: "from-indigo-400 to-purple-400",
+// 		automation: "from-orange-400 to-red-400",
+// 		seo: "from-emerald-400 to-teal-400",
+// 		marketing: "from-pink-400 to-rose-400",
+// 		adsense: "from-blue-500 to-blue-600",
+// 		monetization: "from-green-500 to-teal-500",
+// 	};
+// 	return colors[categoryValue] || "from-slate-500 to-slate-600";
+// }

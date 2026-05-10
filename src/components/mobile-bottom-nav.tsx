@@ -42,7 +42,8 @@ export default function MobileBottomNav() {
 	// Public navigation items (for non-logged in users or public pages)
 	const publicNavItems = [
 		{ icon: Home, label: "Home", href: "/" },
-		{ icon: Search, label: "Browse", href: "/marketplace" },
+		{ icon: Search, label: "Shop", href: "/shop" },
+		{ icon: TrendingUp, label: "Marketplace", href: "/marketplace" },
 		{ icon: Plus, label: "Sell", href: "/login" },
 		{ icon: User, label: "Profile", href: "/login" },
 	];
@@ -61,7 +62,7 @@ export default function MobileBottomNav() {
 	const userNavItems = [
 		{ icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
 		{ icon: Plus, label: "Listings", href: "/dashboard/listings" },
-		{ icon: BookOpen, label: "Blogs", href: "/dashboard/blogs" },
+		{ icon: Search, label: "Shop", href: "/shop" },
 		{ icon: ShoppingBag, label: "Orders", href: "/dashboard/orders" },
 		{ icon: User, label: "Profile", href: "/dashboard/profile" },
 	];
