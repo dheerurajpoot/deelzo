@@ -38,6 +38,7 @@ import { orderService } from "@/services/orderService";
 import AdminSidebar from "@/components/admin-sidebar";
 import InvoiceGenerator from "@/components/InvoiceGenerator";
 import Image from "next/image";
+import { convertPrice } from "@/lib/currencyUtils";
 
 interface Order {
 	_id: string;
@@ -133,7 +134,11 @@ export default function AdminOrdersPage() {
 
             // 2. Stats
             const stats: Stats = {
-                totalRevenue: allOrders.reduce((acc, o) => acc + (o.paymentStatus === 'completed' ? o.finalAmount : 0), 0),
+                totalRevenue: allOrders.reduce((acc, o) => {
+                    if (o.paymentStatus !== 'completed') return acc;
+                    const amountInINR = convertPrice(o.finalAmount, o.currency || 'INR', 'INR');
+                    return acc + amountInINR;
+                }, 0),
                 totalOrders: allOrders.length,
                 completedOrders: allOrders.filter(o => o.status === 'completed').length,
                 pendingOrders: allOrders.filter(o => o.status === 'pending').length,
@@ -245,7 +250,7 @@ export default function AdminOrdersPage() {
 							<ShoppingCart size={24} />
 						</div>
 						<div>
-							<h1 className='text-3xl font-black text-slate-900 tracking-tight'>Sales Registry</h1>
+							<h1 className='text-3xl font-black text-slate-900 tracking-tight'>Sales</h1>
 							<p className='text-slate-400 font-bold text-xs uppercase tracking-[0.2em]'>Administrative Oversight</p>
 						</div>
 					</div>
