@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,6 @@ import {
 	Loader2,
 	Eye,
 	EyeOff,
-	CheckCircle,
 	AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -30,9 +29,10 @@ import {
 import { loginAction } from "@/app/actions/authActions";
 import { userService } from "@/services/userService";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
+import { userContext } from "@/context/userContext";
 
 function SignUpContent() {
-	const router = useRouter();
+    const { setUser } = userContext();
 	const [step, setStep] = useState<"signup" | "verification" | "profile">("signup");
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
@@ -176,9 +176,9 @@ function SignUpContent() {
         if (result.success) {
             const userData = await userService.getUser(firebaseUser.uid);
             localStorage.setItem("user", JSON.stringify(userData));
+            setUser(userData);
             toast.success("Welcome to Deelzo!");
-            router.push("/dashboard");
-						router.refresh();
+            window.location.href = "/dashboard";
         } else {
             setError("Session creation failed");
         }
@@ -294,8 +294,14 @@ function SignUpContent() {
 											value={formData.password}
 											onChange={handleChange}
 											required
-											className='pl-11 h-12 bg-slate-50/50 border-slate-200 rounded-xl font-medium'
+											className='pl-11 pr-12 h-12 bg-slate-50/50 border-slate-200 rounded-xl font-medium focus:border-emerald-500 focus:ring-emerald-500/10'
 										/>
+										<button
+											type='button'
+											onClick={() => setShowPassword(!showPassword)}
+											className='absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors'>
+											{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+										</button>
 									</div>
 								</div>
 								<div className="space-y-1.5">
@@ -310,9 +316,20 @@ function SignUpContent() {
 											value={formData.confirmPassword}
 											onChange={handleChange}
 											required
-											className='pl-11 h-12 bg-slate-50/50 border-slate-200 rounded-xl font-medium'
+											className='pl-11 pr-12 h-12 bg-slate-50/50 border-slate-200 rounded-xl font-medium focus:border-emerald-500 focus:ring-emerald-500/10'
 										/>
+										<button
+											type='button'
+											onClick={() => setShowPassword(!showPassword)}
+											className='absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors'>
+											{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+										</button>
 									</div>
+									{formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
+										<p className="text-[10px] font-bold text-rose-500 mt-1.5 uppercase tracking-widest flex items-center gap-1">
+											<AlertCircle size={12} /> Passwords do not match
+										</p>
+									)}
 								</div>
 							</div>
 

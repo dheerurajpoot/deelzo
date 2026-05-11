@@ -21,9 +21,11 @@ import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { loginAction } from "@/app/actions/authActions";
 import { userService } from "@/services/userService";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
+import { userContext } from "@/context/userContext";
 
 export default function Login() {
 	const router = useRouter();
+    const { setUser } = userContext();
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [showPassword, setShowPassword] = useState(false);
@@ -84,7 +86,7 @@ export default function Login() {
             const userData = await userService.getUser(user.uid);
             localStorage.setItem("user", JSON.stringify(userData));
             toast.success("Welcome back!");
-            router.push(result.role === "admin" ? "/admin" : "/dashboard");
+            window.location.href = result.role === "admin" ? "/admin" : "/dashboard";
         } else {
             setError("Session creation failed");
         }
