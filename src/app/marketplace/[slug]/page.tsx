@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { listingService } from "@/services/listingService";
-import { userService } from "@/services/userService";
 import { bidService } from "@/services/bidService";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
@@ -18,11 +17,6 @@ async function getListing(slug: string) {
 
 	if (!listing) return null;
 
-    // 2. Fetch seller details manually (Join)
-    if (listing.seller) {
-        const seller = await userService.getUser(listing.seller);
-        listing.seller = seller;
-    }
 
 	// 3. Fetch bids manually (Join)
 	const bids = await bidService.getListingBids(listing._id);

@@ -13,17 +13,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { blogService } from "@/services/blogService";
-import { userService } from "@/services/userService";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
 // Helper to fetch blog
 async function getBlog(slug: string) {
     const blog = await blogService.getBlog(slug);
-    if (blog && blog.author) {
-        const author = await userService.getUser(blog.author);
-        blog.author = author;
-    }
+
 	return blog;
 }
 

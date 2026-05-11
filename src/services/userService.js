@@ -12,6 +12,10 @@ import {
 export const userService = {
     // Get user by ID
     async getUser(userId) {
+        if (!userId || typeof userId !== 'string') {
+            console.error("Invalid userId provided to getUser:", userId);
+            return null;
+        }
         const userRef = ref(db, `users/${userId}`);
         const snapshot = await get(userRef);
         return snapshot.exists() ? { _id: userId, ...snapshot.val() } : null;
