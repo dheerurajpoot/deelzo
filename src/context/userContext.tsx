@@ -54,7 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     // Fallback to email if user not found by UID (migrated users)
                     if (!userData && firebaseUser.email) {
                         userData = await userService.getUserByEmail(firebaseUser.email);
-                        // Optional: Link the UID to this user record if found
+                    }
+
+                    // Sync email verification status
+                    if (firebaseUser.emailVerified && userData && !userData.isEmailVerified) {
+                        await userService.updateUserProfile(firebaseUser.uid, { isEmailVerified: true });
+                        userData.isEmailVerified = true;
                     }
                     
 					setUser(userData);

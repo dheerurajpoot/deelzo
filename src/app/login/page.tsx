@@ -16,10 +16,11 @@ import {
 	AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, googleProvider } from "@/lib/firebase";
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { loginAction } from "@/app/actions/authActions";
 import { userService } from "@/services/userService";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 export default function Login() {
 	const router = useRouter();
@@ -39,34 +40,72 @@ export default function Login() {
 		});
 	};
 
+	const handleGoogleLogin = async () => {
+		setError("");
+		setLoading(true);
+		try {
+			const result = await signInWithPopup(auth, googleProvider);
+			const user = result.user;
+            
+            // Check if profile exists
+            let userData = await userService.getUser(user.uid);
+            
+            if (!userData) {
+                // Initial profile creation for Google users (auto-signup)
+                await userService.createUserProfile(user.uid, {
+                    name: user.displayName || "",
+                    email: user.email || "",
+                    phone: "",
+                    isEmailVerified: true,
+                    role: 'user'
+                });
+                userData = await userService.getUser(user.uid);
+            }
+
+            if (!userData?.phone) {
+                toast.info("Please complete your profile");
+                router.push("/signup?step=profile&uid=" + user.uid);
+                return;
+            }
+
+            await finalizeLogin(user);
+		} catch (err: any) {
+			console.error("Google Auth Error:", err);
+			setError(err.message || "Google authentication failed");
+		} finally {
+			setLoading(false);
+		}
+	};
+
+    const finalizeLogin = async (user: any) => {
+        const idToken = await user.getIdToken();
+        const result = await loginAction(idToken);
+        if (result.success) {
+            const userData = await userService.getUser(user.uid);
+            localStorage.setItem("user", JSON.stringify(userData));
+            toast.success("Welcome back!");
+            router.push(result.role === "admin" ? "/admin" : "/dashboard");
+        } else {
+            setError("Session creation failed");
+        }
+    };
+
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setError("");
 		setLoading(true);
 
 		try {
-            // 1. Sign in with Firebase Client SDK
             const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
             const user = userCredential.user;
-            const idToken = await user.getIdToken();
+            
+            const userData = await userService.getUser(user.uid);
+            if (userData && !userData.phone) {
+                router.push("/signup?step=profile&uid=" + user.uid);
+                return;
+            }
 
-            // 2. Call Server Action to set cookies
-            const result = await loginAction(idToken);
-
-			if (result.success) {
-                // Fetch full user data to store in localStorage (to keep current UI behavior)
-                const userData = await userService.getUser(user.uid);
-				localStorage.setItem("user", JSON.stringify(userData));
-				toast.success("Login successful");
-				window.location.reload();
-				setTimeout(() => {
-					router.push(
-						result.role === "admin" ? "/admin" : "/dashboard"
-					);
-				}, 1000);
-			} else {
-				setError(result.message || "Login failed");
-			}
+            await finalizeLogin(user);
 		} catch (err: any) {
 			setError(err.message || "An error occurred. Please try again.");
             toast.error(err.message || "Login failed");
@@ -99,6 +138,24 @@ export default function Login() {
 						<span>{error}</span>
 					</div>
 				)}
+
+				{/* Google Button */}
+				<Button
+					type='button'
+					onClick={handleGoogleLogin}
+					disabled={loading}
+					variant="outline"
+					className='w-full h-12 rounded-xl border-slate-200 hover:bg-slate-50 gap-3 font-bold text-slate-700 transition-all active:scale-[0.98]'
+				>
+					<GoogleIcon className='w-5 h-5' />
+					Continue with Google
+				</Button>
+
+				<div className='my-8 flex items-center gap-4'>
+					<div className='h-px flex-1 bg-slate-100' />
+					<span className='text-[10px] font-black text-slate-300 uppercase tracking-widest'>Or email login</span>
+					<div className='h-px flex-1 bg-slate-100' />
+				</div>
 
 				{/* Form */}
 				<form onSubmit={handleSubmit} className='space-y-6'>
