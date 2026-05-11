@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ import { loginAction } from "@/app/actions/authActions";
 import { userService } from "@/services/userService";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
-export default function SignUp() {
+function SignUpContent() {
 	const router = useRouter();
 	const [step, setStep] = useState<"signup" | "verification" | "profile">("signup");
 	const [loading, setLoading] = useState(false);
@@ -425,5 +425,18 @@ export default function SignUp() {
                 </div>
 			</div>
 		</div>
+	);
+}
+
+export default function SignUp() {
+	return (
+		<Suspense fallback={
+			<div className="min-h-screen flex flex-col items-center justify-center bg-white gap-4">
+				<Loader2 className="animate-spin text-slate-900" size={48} />
+				<p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Initialising Security...</p>
+			</div>
+		}>
+			<SignUpContent />
+		</Suspense>
 	);
 }
