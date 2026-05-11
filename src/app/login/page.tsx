@@ -85,6 +85,7 @@ export default function Login() {
         if (result.success) {
             const userData = await userService.getUser(user.uid);
             localStorage.setItem("user", JSON.stringify(userData));
+            setUser(userData);
             toast.success("Welcome back!");
             window.location.href = result.role === "admin" ? "/admin" : "/dashboard";
         } else {
