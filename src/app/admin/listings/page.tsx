@@ -15,7 +15,6 @@ import {
 	Clock,
 	ShoppingBag,
 	Search,
-	Filter,
 	Loader2,
 	AlertCircle,
 	Calendar,
@@ -24,22 +23,19 @@ import {
 	Eye as EyeIcon,
 	Globe,
 	Users,
-	MapPin,
 	Link as LinkIcon,
 	ChevronLeft,
 	ChevronRight,
 	Tag,
 	Activity,
 	Layers,
-	ShieldCheck,
-	History,
 	HardDrive,
 } from "lucide-react";
 import AdminSidebar from "@/components/admin-sidebar";
 import { toast } from "sonner";
 import { userContext } from "@/context/userContext";
-import axios from "axios";
 import { listingService } from "@/services/listingService";
+import { sendListingStatusEmail } from "@/app/actions/emailActions";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -52,21 +48,19 @@ export default function AdminListingsPage() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [paginationData, setPaginationData] = useState<any>(null);
 	const [statsData, setStatsData] = useState<any>(null);
-	const [deleting, setDeleting] = useState<any>(null);
-	const [updating, setUpdating] = useState<any>(null);
 
 	const fetchListings = async () => {
 		try {
 			if (!user) return;
 			setLoading(true);
-            
-            // Use listingService with filters
-            const filters: any = {
-                page: currentPage,
-                limit: 15,
-                search: searchTerm,
-            };
-            if (filter !== "all") filters.status = filter;
+
+			// Use listingService with filters
+			const filters: any = {
+				page: currentPage,
+				limit: 15,
+				search: searchTerm,
+			};
+			if (filter !== "all") filters.status = filter;
 
             const result = await listingService.getListings(filters);
 			setListings(result.listings || []);
@@ -100,8 +94,6 @@ export default function AdminListingsPage() {
 	const handleDeleteListing = async (listingId: string) => {
 		if (!window.confirm("Are you sure you want to delete this listing?"))
 			return;
-
-		setDeleting(listingId);
 		try {
             await listingService.deleteListing(listingId);
             toast.success("Listing deleted successfully");
@@ -109,22 +101,27 @@ export default function AdminListingsPage() {
 		} catch (error) {
 			console.error("Delete error:", error);
 			toast.error("Error deleting listing");
-		} finally {
-			setDeleting(null);
 		}
 	};
 
 	const handleUpdateStatus = async (listingId: string, newStatus: string) => {
-		setUpdating(listingId);
 		try {
+            const listing = listings.find(l => l._id === listingId);
             await listingService.updateListing(listingId, { status: newStatus as any });
+            
+            // Send email to seller
+            if (listing && (listing.seller?.email || listing.userId?.email)) {
+                await sendListingStatusEmail({
+                    title: listing.title,
+                    sellerEmail: listing.seller?.email || listing.userId?.email
+                }, newStatus);
+            }
+
             toast.success("Status updated successfully");
             await fetchListings();
 		} catch (error) {
 			console.error("Update error:", error);
 			toast.error("Error updating status");
-		} finally {
-			setUpdating(null);
 		}
 	};
 

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { orderService } from "@/services/orderService";
 import { productService } from "@/services/productService";
+import { sendOrderEmails } from "@/app/actions/emailActions";
+import { db } from "@/lib/firebaseAdmin";
 
 export async function POST(request) {
 	try {
@@ -66,6 +68,27 @@ export async function POST(request) {
                     }
                 }
 			}
+
+            // Send confirmation emails
+            try {
+                const userRef = db.ref(`users/${order.user}`);
+                const userSnap = await userRef.once('value');
+                const userData = userSnap.val();
+
+                await sendOrderEmails({
+                    ...order,
+                    userName: userData?.name || "Customer",
+                    userEmail: userData?.email || order.email || "No Email",
+                    items: order.items?.map((item) => ({
+                        title: item.snapshot?.title || "Product",
+                        price: item.snapshot?.price || 0,
+                        quantity: item.quantity || 1
+                    }))
+                });
+            } catch (emailError) {
+                console.error("Failed to send PayU order emails:", emailError);
+            }
+
 			return NextResponse.redirect(new URL("/dashboard/orders?payment=success", request.url), { status: 303 });
 		} else {
 			await orderService.updateOrder(order._id, { paymentStatus: "failed", status: "failed" });

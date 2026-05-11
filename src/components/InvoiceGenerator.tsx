@@ -6,7 +6,8 @@ import { FileText, Download, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
-import { EMAIL, PHONE, BASE_URL } from "@/lib/constant";
+import { EMAIL, BASE_URL } from "@/lib/constant";
+import { userContext } from "@/context/userContext";
 
 interface OrderItem {
 	product: string;
@@ -48,9 +49,13 @@ interface OrderData {
 
 export default function InvoiceGenerator({ order, variant = "default" }: { order: OrderData, variant?: "default" | "icon" }) {
 	const [isGenerating, setIsGenerating] = React.useState(false);
+	const { user: currentUser } = userContext();
 	const invoiceRef = useRef<HTMLDivElement>(null);
 
 	// console.log(order);
+
+	const customerName = (typeof order.user === 'object' && order.user?.name) ? order.user.name : (currentUser?.name || "Customer");
+	const customerEmail = (typeof order.user === 'object' && order.user?.email) ? order.user.email : (currentUser?.email || "");
 
 	const handleDownload = async () => {
 		try {
@@ -220,8 +225,8 @@ export default function InvoiceGenerator({ order, variant = "default" }: { order
 						<div>
 							<h3 style={{ fontSize: '11px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '12px', margin: 0 }}>Bill To</h3>
 							<div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-								<p style={{ fontWeight: '800', fontSize: '18px', color: '#0f172a', margin: '0' }}>{order.user?.name || "Customer"}</p>
-								<p style={{ color: '#475569', fontSize: '14px', margin: 0 }}>{order.user?.email}</p>
+								<p style={{ fontWeight: '800', fontSize: '18px', color: '#0f172a', margin: '0' }}>{customerName}</p>
+								<p style={{ color: '#475569', fontSize: '14px', margin: 0 }}>{customerEmail}</p>
 							</div>
 						</div>
 						<div style={{ textAlign: 'right' }}>

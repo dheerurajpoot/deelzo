@@ -551,10 +551,9 @@ export default function EditListing() {
 
 		try {
 			// Sanitize assetLink before submission
-			const submitData = {
+			const submitData: any = {
 				...formData,
 				price: Number.parseFloat(formData.price),
-				seller: user?._id,
 				metrics: {
 					...formData.metrics,
 					assetLink: formData.metrics.assetLink
@@ -562,6 +561,16 @@ export default function EditListing() {
 						: "",
 				},
 			};
+
+			// Ensure seller remains the original ID even if admin edits
+			if (submitData.seller && typeof submitData.seller === 'object') {
+				submitData.seller = submitData.seller._id;
+			}
+			
+			// Also clean up any other populated fields if they exist
+			if (submitData.user && typeof submitData.user === 'object') {
+				submitData.user = submitData.user._id;
+			}
 
 			await listingService.updateListing(params.id as string, submitData);
 

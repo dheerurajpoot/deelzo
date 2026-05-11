@@ -37,6 +37,7 @@ import { PHONE } from "@/lib/constant";
 import { productService } from "@/services/productService";
 import { couponService } from "@/services/couponService";
 import { orderService } from "@/services/orderService";
+import { sendOrderEmails } from "@/app/actions/emailActions";
 
 interface Product {
 	_id: string;
@@ -336,6 +337,15 @@ export default function CheckoutComponent() {
 
 			if (order) {
 				toast.success("Order Placed Successfully!");
+                
+                // Send emails
+                await sendOrderEmails({
+                    ...order,
+                    userName: user?.name,
+                    userEmail: user?.email,
+                    items: products.map(p => ({ title: p.title, price: p.price, quantity: 1 }))
+                });
+
 				setTimeout(() => {
 					clearCart();
 				}, 1000);

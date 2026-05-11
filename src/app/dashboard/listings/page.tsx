@@ -18,6 +18,7 @@ import {
   Archive,
   TrendingUp,
   Search,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { userContext } from '@/context/userContext';
@@ -108,6 +109,24 @@ export default function ListingsPage() {
         return <Archive size={16} className="text-rose-600" />;
       default:
         return <Package size={16} className="text-slate-600" />;
+    }
+  };
+
+  const handleDeleteListing = async (listingId: string) => {
+    if (!window.confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setUpdatingStatus(listingId);
+      await listingService.deleteListing(listingId);
+      setListings(prev => prev.filter(listing => listing._id !== listingId));
+      toast.success('Listing deleted successfully');
+    } catch (error: any) {
+      console.error('Error deleting listing:', error);
+      toast.error('Failed to delete listing');
+    } finally {
+      setUpdatingStatus(null);
     }
   };
 
@@ -345,6 +364,16 @@ export default function ListingsPage() {
                                 View
                               </Button>
                             </Link>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleDeleteListing(listing._id)}
+                              disabled={updatingStatus === listing._id}
+                              className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300"
+                            >
+                              <Trash2 size={14} className="mr-1" />
+                              Delete
+                            </Button>
                           </div>
                         </div>
                       </td>
@@ -512,6 +541,16 @@ export default function ListingsPage() {
                           View
                         </Button>
                       </Link>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDeleteListing(listing._id)}
+                        disabled={updatingStatus === listing._id}
+                        className="flex-1 border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300"
+                      >
+                        <Trash2 size={14} className="mr-1" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 </div>

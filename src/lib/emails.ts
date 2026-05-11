@@ -256,3 +256,149 @@ export function generateListingStatusUpdate(
     </html>
   `;
 }
+
+export function generateOrderConfirmationEmail(order: any): string {
+	const itemsList = order.items
+		? order.items
+				.map(
+					(item: any) => `
+        <tr>
+          <td style="padding: 12px 0; border-bottom: 1px solid #edf2f7;">
+            <p style="margin: 0; font-weight: bold; color: #2d3748;">${item.title}</p>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: #718096;">Qty: ${item.quantity || 1}</p>
+          </td>
+          <td style="padding: 12px 0; border-bottom: 1px solid #edf2f7; text-align: right; vertical-align: top;">
+            <p style="margin: 0; font-weight: bold; color: #2d3748;">$${item.price?.toLocaleString()}</p>
+          </td>
+        </tr>
+      `
+				)
+				.join("")
+		: "";
+
+	return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Order Confirmation - ${companyName}</title>
+    </head>
+    <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #2d3748; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc;">
+      <div style="background: linear-gradient(135deg, #2563eb, #06b6d4); padding: 40px 20px; text-align: center; border-radius: 16px 16px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 36px; font-weight: 900; letter-spacing: -1px;">${companyName}</h1>
+        <p style="color: #e0f2fe; margin: 12px 0 0 0; font-size: 20px; font-weight: 500;">Thank you for your order!</p>
+      </div>
+      
+      <div style="background: white; padding: 32px; border-radius: 0 0 16px 16px; shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        <h2 style="color: #1a202c; margin-top: 0; font-size: 24px; font-weight: 800;">Order Confirmation</h2>
+        <p style="color: #4a5568; font-size: 16px;">Hello ${order.userName || "Valued Customer"},</p>
+        <p style="color: #4a5568; font-size: 16px;">We've received your order and we're getting it ready for you. Below is your order summary.</p>
+        
+        <div style="background: #f1f5f9; border-radius: 12px; padding: 20px; margin: 24px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="color: #64748b; font-size: 13px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Order ID</td>
+              <td style="color: #64748b; font-size: 13px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; text-align: right;">Order Date</td>
+            </tr>
+            <tr>
+              <td style="color: #1e293b; font-weight: 700; padding-top: 4px;">#${order.orderId}</td>
+              <td style="color: #1e293b; font-weight: 700; padding-top: 4px; text-align: right;">${new Date(order.createdAt).toLocaleDateString()}</td>
+            </tr>
+          </table>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="text-align: left; color: #64748b; font-size: 12px; text-transform: uppercase; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;">Item</th>
+              <th style="text-align: right; color: #64748b; font-size: 12px; text-transform: uppercase; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsList}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td style="padding-top: 16px; font-size: 16px; color: #4a5568; font-weight: 700;">Total</td>
+              <td style="padding-top: 16px; font-size: 20px; color: #2563eb; font-weight: 900; text-align: right;">$${order.finalAmount?.toLocaleString()}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div style="margin: 32px 0; text-align: center;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/orders" style="background: #2563eb; color: white; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 700; display: inline-block; transition: background 0.2s;">View Order Status</a>
+        </div>
+
+        <p style="font-size: 14px; color: #64748b; background: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #cbd5e1;">
+          <strong>Digital Asset Access:</strong> Once your payment is fully verified, you will receive instructions on how to access your digital assets.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
+        <p style="font-size: 15px; color: #64748b;">
+          If you have any questions, reply to this email or contact support.
+        </p>
+        <p style="font-size: 15px; color: #64748b; font-weight: 700;">
+          Regards,<br>
+          The ${companyName} Team
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+export function generateAdminOrderNotification(order: any): string {
+	return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>New Order Received - ${companyName}</title>
+    </head>
+    <body style="font-family: 'Inter', Arial, sans-serif; line-height: 1.6; color: #2d3748; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: #1e293b; padding: 40px 20px; text-align: center; border-radius: 16px 16px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 900;">New Sale Alert! 💰</h1>
+        <p style="color: #94a3b8; margin: 12px 0 0 0; font-size: 18px;">A new order has been placed on ${companyName}</p>
+      </div>
+      
+      <div style="background: white; padding: 32px; border-radius: 0 0 16px 16px; border: 1px solid #e2e8f0; border-top: none;">
+        <div style="background: #f8fafc; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #f1f5f9;">
+          <p style="margin: 0; font-size: 14px; color: #64748b; text-transform: uppercase; font-weight: 700;">Order Value</p>
+          <p style="margin: 4px 0 0 0; font-size: 36px; color: #2563eb; font-weight: 900;">$${order.finalAmount?.toLocaleString()}</p>
+        </div>
+
+        <h3 style="color: #1e293b; font-size: 18px; margin-bottom: 16px; font-weight: 800;">Order Details</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Order ID:</td>
+            <td style="padding: 8px 0; color: #1e293b; font-weight: 600; text-align: right;">#${order.orderId}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Customer:</td>
+            <td style="padding: 8px 0; color: #1e293b; font-weight: 600; text-align: right;">${order.userName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Email:</td>
+            <td style="padding: 8px 0; color: #1e293b; font-weight: 600; text-align: right;">${order.userEmail}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Status:</td>
+            <td style="padding: 8px 0; text-align: right;">
+              <span style="background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase;">${order.status}</span>
+            </td>
+          </tr>
+        </table>
+
+        <div style="margin: 32px 0; text-align: center;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/orders" style="background: #1e293b; color: white; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 700; display: inline-block;">Manage Order in Admin Panel</a>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
+        <p style="font-size: 14px; color: #94a3b8; text-align: center;">
+          This is an automated administrative notification.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+}

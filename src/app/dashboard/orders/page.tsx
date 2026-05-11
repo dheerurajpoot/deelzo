@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
 	Select,
@@ -13,20 +12,15 @@ import {
 import {
 	Dialog,
 	DialogContent,
-	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
 import {
 	ShoppingBag,
 	Loader2,
 	CheckCircle,
-	XCircle,
-	Clock,
 	Download,
 	Package,
 	LayoutGrid,
-	Hash,
-	Calendar,
 	ExternalLink,
 	Shield,
 } from "lucide-react";
@@ -71,6 +65,11 @@ interface Order {
 	transactionId?: string;
 	paymentMethod?: string;
 	product?: string;
+	user?: {
+		name: string;
+		email: string;
+		_id: string;
+	} | string;
 }
 
 export default function MyOrdersPage() {

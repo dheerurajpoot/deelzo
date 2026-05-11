@@ -51,8 +51,8 @@ export const userService = {
         });
     },
 
-    // Get all users (Admin)
-    async getAllUsers() {
+    // Get all users (Simple list for joins)
+    async getUsers() {
         const usersRef = ref(db, 'users');
         const snapshot = await get(usersRef);
         if (!snapshot.exists()) return [];
@@ -61,6 +61,12 @@ export const userService = {
         snapshot.forEach((child) => {
             users.push({ _id: child.key, ...child.val() });
         });
+        return users;
+    },
+
+    // Get all users (Admin with full stats)
+    async getAllUsers() {
+        const users = await this.getUsers();
         // Compute dynamic counts for listings, orders, and blogs
         try {
             const [ordersSnap, listingsSnap, blogsSnap] = await Promise.all([

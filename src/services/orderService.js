@@ -5,7 +5,6 @@ import {
     get, 
     push,
     update, 
-    remove, 
     query, 
     orderByChild, 
     equalTo 
@@ -93,6 +92,20 @@ export const orderService = {
                 orders.push({ _id: child.key, ...data });
             }
         });
+
+        // Join user info
+        try {
+            const userSnap = await get(ref(db, `users/${userId}`));
+            if (userSnap.exists()) {
+                const userData = { _id: userId, ...userSnap.val() };
+                orders.forEach(order => {
+                    order.user = userData;
+                });
+            }
+        } catch (e) {
+            console.error("Failed to populate user for orders", e);
+        }
+
         return orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     },
 

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { userContext } from "@/context/userContext";
 import { toast } from "sonner";
 import { listingService } from "@/services/listingService";
+import { sendNewListingEmail } from "@/app/actions/emailActions";
 import {
 	X,
 	Upload,
@@ -470,6 +471,11 @@ export default function CreateListing() {
 
 			if (response._id) {
 				toast.success("Listing created successfully!");
+                // Send email to admin
+                await sendNewListingEmail({
+                    ...response,
+                    sellerName: user?.name
+                });
 				router.push("/dashboard");
 			} else {
 				throw new Error("Failed to create listing");

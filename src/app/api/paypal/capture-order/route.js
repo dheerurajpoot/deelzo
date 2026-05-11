@@ -4,8 +4,8 @@ import { productService } from "@/services/productService";
 import { orderService } from "@/services/orderService";
 import { cartService } from "@/services/cartService";
 import { getDataFromToken } from "@/lib/auth";
-import { sendEmail } from "@/lib/emails";
-import { EMAIL } from "@/lib/constant";
+import { sendOrderEmails } from "@/app/actions/emailActions";
+import { db } from "@/lib/firebaseAdmin";
 
 export async function POST(request) {
     try {
@@ -80,20 +80,21 @@ export async function POST(request) {
         // 6. Clear user's cart
         await cartService.clearCart(userId);
 
-        // 7. Send confirmation email
-        sendEmail({
-            to: EMAIL,
-            subject: `New PayPal Order: ${orderId}`,
-            html: `
-                <div style="font-family: sans-serif; padding: 20px;">
-                    <h2>New PayPal Order Received</h2>
-                    <p>Order ID: <strong>${orderId}</strong></p>
-                    <p>Total: <strong>${cartData.currency} ${cartData.finalAmount}</strong></p>
-                    <p>Customer ID: <strong>${userId}</strong></p>
-                    <p>Transaction ID: <strong>${captureData.id}</strong></p>
-                </div>
-            `,
-        }).catch(err => console.error("Email error:", err));
+        // 7. Send confirmation emails
+        const userRef = db.ref(`users/${userId}`);
+        const userSnap = await userRef.once('value');
+        const userData = userSnap.val();
+
+        await sendOrderEmails({
+            ...newOrder,
+            userName: userData?.name || "Customer",
+            userEmail: userData?.email || "No Email",
+            items: orderItems.map(item => ({
+                title: item.snapshot?.title || "Product",
+                price: item.snapshot?.price || 0,
+                quantity: item.quantity || 1
+            }))
+        });
 
         return NextResponse.json({
             success: true,

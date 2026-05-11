@@ -1,4 +1,5 @@
 import { db } from "@/lib/firebase";
+import { userService } from "./userService";
 import { 
     ref, 
     set, 
@@ -77,8 +78,26 @@ export const listingService = {
         const limit = parseInt(filters.limit) || 12;
         const skip = (page - 1) * limit;
         
+        const paginatedListings = listings.slice(skip, skip + limit);
+
+        // Populate Seller Info (In-memory join)
+        try {
+            const allUsers = await userService.getUsers();
+            const userMap = {};
+            allUsers.forEach(u => userMap[u._id] = u);
+
+            paginatedListings.forEach(listing => {
+                const sellerId = listing.seller || listing.userId;
+                if (sellerId && typeof sellerId === 'string' && userMap[sellerId]) {
+                    listing.seller = userMap[sellerId];
+                }
+            });
+        } catch (error) {
+            console.error("Failed to populate seller info:", error);
+        }
+        
         return {
-            listings: listings.slice(skip, skip + limit),
+            listings: paginatedListings,
             total,
             pagination: {
                 page,
@@ -97,7 +116,16 @@ export const listingService = {
         // Try by ID first
         const listingRef = ref(db, `listings/${idOrSlug}`);
         const snapshot = await get(listingRef);
-        if (snapshot.exists()) return { _id: idOrSlug, ...snapshot.val() };
+        if (snapshot.exists()) {
+            const listing = { _id: idOrSlug, ...snapshot.val() };
+            // Populate Seller Info
+            const sellerId = listing.seller || listing.userId;
+            if (sellerId && typeof sellerId === 'string') {
+                const sellerData = await userService.getUser(sellerId);
+                if (sellerData) listing.seller = sellerData;
+            }
+            return listing;
+        }
 
         // Try by Slug
         const slugQuery = query(listingsRef, orderByChild('slug'), equalTo(idOrSlug));
@@ -105,7 +133,15 @@ export const listingService = {
         if (slugSnapshot.exists()) {
             const listings = slugSnapshot.val();
             const id = Object.keys(listings)[0];
-            return { _id: id, ...listings[id] };
+            const listing = { _id: id, ...listings[id] };
+            
+            // Populate Seller Info
+            const sellerId = listing.seller || listing.userId;
+            if (sellerId && typeof sellerId === 'string') {
+                const sellerData = await userService.getUser(sellerId);
+                if (sellerData) listing.seller = sellerData;
+            }
+            return listing;
         }
 
         return null;
