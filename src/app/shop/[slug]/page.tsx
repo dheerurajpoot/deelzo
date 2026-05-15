@@ -503,22 +503,59 @@ export default function ProductDetailPage() {
 			<div className='max-w-7xl mx-auto px-4 md:px-6 lg:px-8 my-16'>
 				<h2 className='text-2xl md:text-2xl font-bold text-slate-900 mb-8'>Popular Products</h2>
 				{loading ? <div className='flex justify-center'><Loader2 className='animate-spin text-orange-500' size={32} /></div> : (
-					<div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
+					<div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6'>
 						{popularProducts.map((popProduct) => (
 							<Link key={popProduct._id} href={`/shop/${popProduct.slug}`}>
-								<Card className='bg-white border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 p-0 group overflow-hidden cursor-pointer'>
-									<div className='relative h-40 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden'>
-										{popProduct.thumbnail ? <img src={popProduct.thumbnail} alt={popProduct.title} className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-500' /> : <div className='w-full h-full flex items-center justify-center'><Package size={48} className='text-slate-300' /></div>}
-										<div className='absolute top-2 right-2 flex gap-1'>{popProduct.isFeatured && <span className='px-2 py-1 bg-orange-500 text-white text-xs font-medium rounded-full'>Featured</span>}{popProduct.isBestseller && <span className='px-2 py-1 bg-violet-500 text-white text-xs font-medium rounded-full'>Bestseller</span>}</div>
-										<div className='absolute bottom-2 left-2'>{getStatusBadge(popProduct.status)}</div>
+								<Card className='bg-white border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 p-0 group overflow-hidden cursor-pointer h-full flex flex-col'>
+									<div className='relative h-32 md:h-40 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden'>
+										{popProduct.thumbnail ? (
+											<img 
+												src={popProduct.thumbnail} 
+												alt={popProduct.title} 
+												className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-500' 
+											/>
+										) : (
+											<div className='w-full h-full flex items-center justify-center'>
+												<Package size={32} className='text-slate-300' />
+											</div>
+										)}
+										<div className='absolute top-1.5 right-1.5 flex flex-col items-end gap-1'>
+											{popProduct.isFeatured && (
+												<span className='px-1.5 py-0.5 bg-orange-500 text-white text-[8px] md:text-xs font-medium rounded-full shadow-sm'>
+													Featured
+												</span>
+											)}
+											{popProduct.isBestseller && (
+												<span className='px-1.5 py-0.5 bg-violet-500 text-white text-[8px] md:text-xs font-medium rounded-full shadow-sm'>
+													Bestseller
+												</span>
+											)}
+										</div>
 									</div>
-									<CardContent className='p-4'>
-										<p className='text-xs text-slate-500 uppercase tracking-wide'>{popProduct.category}</p>
-										<h3 className='font-semibold text-slate-900 line-clamp-1'>{popProduct.title}</h3>
-										<p className='text-sm text-slate-600 line-clamp-2 mb-3'>{popProduct.shortDescription || popProduct.description.substring(0, 100) + "..."}</p>
-										<div className='flex items-center justify-between mb-3'>
-											<div className='flex items-baseline gap-2'><span className='text-lg font-bold text-slate-900'>{popProduct.currency} {popProduct.price}</span>{popProduct.comparePrice && popProduct.comparePrice > 0 && <span className='text-sm text-slate-400 line-through'>{popProduct.currency} {popProduct.comparePrice}</span>}</div>
-											<div className='flex items-center gap-1 text-sm text-slate-500'><Star size={14} className='text-amber-400 fill-amber-400' /><span>{popProduct.rating?.average?.toFixed(1) || "0.0"}</span><span className='text-slate-400'>({popProduct.rating?.count || 0})</span></div>
+									<CardContent className='p-3 md:p-4 flex flex-col flex-1'>
+										<p className='text-[10px] text-slate-500 uppercase tracking-wider mb-1'>{popProduct.category}</p>
+										<h3 className='text-xs md:text-base font-bold text-slate-900 line-clamp-2 mb-1 group-hover:text-orange-600 transition-colors'>{popProduct.title}</h3>
+										
+										<div className='mt-auto pt-2'>
+											<div className='flex items-center gap-1 mb-2'>
+												<Star size={10} className='text-amber-400 fill-amber-400' />
+												<span className='text-[10px] md:text-sm font-medium text-slate-700'>
+													{popProduct.rating?.average?.toFixed(1) || "0.0"}
+												</span>
+												<span className='text-[10px] text-slate-400'>
+													({popProduct.rating?.count || 0})
+												</span>
+											</div>
+											<div className='flex items-baseline flex-wrap gap-1'>
+												<span className='text-sm md:text-lg font-bold text-slate-900'>
+													{popProduct.currency}{popProduct.price}
+												</span>
+												{popProduct.comparePrice && popProduct.comparePrice > product.price && (
+													<span className='text-[10px] md:text-sm text-slate-400 line-through'>
+														{popProduct.currency}{popProduct.comparePrice}
+													</span>
+												)}
+											</div>
 										</div>
 									</CardContent>
 								</Card>

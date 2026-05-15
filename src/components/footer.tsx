@@ -39,32 +39,9 @@ export default function Footer() {
 			<div className='absolute top-20 right-20 w-64 h-64 bg-gradient-to-br from-orange-500/10 to-rose-500/10 rounded-full blur-3xl' />
 			<div className='absolute bottom-20 left-20 w-48 h-48 bg-gradient-to-br from-sky-500/10 to-blue-500/10 rounded-full blur-3xl' />
 
-			<div className='relative max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-16 md:py-20'>
-				{/* Top Section - Newsletter */}
-				<div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 pb-12 border-b border-white/10'>
-					<div className='max-w-md'>
-						<div className='inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full border border-white/20 mb-4'>
-							<Sparkles size={14} className='text-orange-400' />
-							<span className='text-xs font-semibold text-white'>Stay Updated</span>
-						</div>
-						<h3 className='text-2xl md:text-3xl font-bold text-white mb-2'>Join Our Newsletter</h3>
-						<p className='text-slate-400'>Get the latest digital asset trends and exclusive deals delivered to your inbox.</p>
-					</div>
-					<div className='flex gap-3 w-full lg:w-auto'>
-						<input
-							type='email'
-							placeholder='Enter your email'
-							className='flex-1 lg:w-64 px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-orange-500/50 transition-colors'
-						/>
-						<button className='px-6 py-3 bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 flex items-center gap-2 whitespace-nowrap'>
-							Subscribe
-							<ArrowRight size={16} />
-						</button>
-					</div>
-				</div>
-
+			<div className='relative max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-4'>
 				{/* Main Footer Grid */}
-				<div className='grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12 py-12'>
+				<div className='grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12 py-4 md:py-4'>
 					{/* Brand Column */}
 					<div className='col-span-2 md:col-span-4 lg:col-span-2'>
 						<div className='flex items-center gap-3 mb-6'>
@@ -161,7 +138,7 @@ export default function Footer() {
 				</div>
 
 				{/* Bottom Bar */}
-				<div className='pt-8 border-t border-white/10'>
+				<div className='pt-8 border-t border-white/10 mb-18 md:mb-2'>
 					<div className='flex flex-col md:flex-row justify-between items-center gap-4'>
 						<p className='text-slate-500 text-sm text-center md:text-left'>
 							© 2026{" "}

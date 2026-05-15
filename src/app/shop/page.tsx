@@ -80,8 +80,17 @@ export default function ShopPage() {
 	const [products, setProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [searchQuery, setSearchQuery] = useState("");
+	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("all");
 	const [sortBy, setSortBy] = useState("newest");
+
+	// Debounce search query
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchQuery(searchQuery);
+		}, 500);
+		return () => clearTimeout(timer);
+	}, [searchQuery]);
 
 	const fetchProducts = async () => {
 		try {
@@ -92,7 +101,7 @@ export default function ShopPage() {
             };
 
 			if (selectedCategory !== "all") filters.category = selectedCategory;
-			if (searchQuery) filters.search = searchQuery;
+			if (debouncedSearchQuery) filters.search = debouncedSearchQuery;
 
 			// Handle sorting
 			switch (sortBy) {
@@ -128,38 +137,39 @@ export default function ShopPage() {
 
 	useEffect(() => {
 		fetchProducts();
-	}, [selectedCategory, sortBy]);
+	}, [selectedCategory, sortBy, debouncedSearchQuery]);
 
 	const hasActiveFilters = selectedCategory !== "all" || searchQuery;
 
 	const clearFilters = () => {
 		setSelectedCategory("all");
 		setSearchQuery("");
+		setDebouncedSearchQuery("");
 	};
 
 	return (
 		<div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100'>
 			{/* Hero Section */}
-			<section className='relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-16 md:py-24'>
+			<section className='relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-10 md:py-16'>
 				<div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
 				<div className='absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-orange-500/20 to-rose-500/20 rounded-full blur-3xl' />
 				<div className='absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-full blur-3xl' />
 
 				<div className='relative max-w-7xl mx-auto px-4 md:px-6 lg:px-8'>
 					<div className='text-center max-w-3xl mx-auto'>
-						<div className='inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 mb-6'>
+						<div className='inline-flex items-center gap-2 px-3 md:px-4 py-1 md:py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 mb-6'>
 							<Sparkles size={16} className='text-orange-400' />
 							<span className='text-sm font-medium'>
 								Premium Digital Products
 							</span>
 						</div>
-						<h1 className='text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight'>
+						<h1 className='text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 leading-tight'>
 							Supercharge Your
 							<span className='block text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-rose-400'>
 								Digital Journey
 							</span>
 						</h1>
-						<p className='text-lg md:text-xl text-slate-300 mb-8 max-w-2xl mx-auto'>
+						<p className='text-sm md:text-base text-slate-300 mb-6 md:mb-8 max-w-2xl mx-auto'>
 							Discover premium code scripts, tools, and services
 							to accelerate your online success
 						</p>
@@ -174,7 +184,7 @@ export default function ShopPage() {
 								placeholder='Search for scripts, tools, courses...'
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
-								className='pl-12 pr-4 py-6 text-lg bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-slate-400 rounded-xl focus:bg-white/20'
+								className='text-sm md:text-base pl-10 md:pl-12 pr-4 py-3 md:py-6 bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-slate-400 rounded-xl focus:bg-white/20'
 							/>
 						</div>
 					</div>

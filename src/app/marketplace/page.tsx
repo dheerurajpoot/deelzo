@@ -86,7 +86,7 @@ export default function Marketplace() {
 								properties
 							</p>
 						</div>
-						{filteredListings.length > 0 && (
+						{/* {filteredListings.length > 0 && (
 							<div className='flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-200 shadow-sm'>
 								<Grid3x3 size={18} className='text-slate-500' />
 								<span className='text-sm font-semibold text-slate-700'>
@@ -96,7 +96,7 @@ export default function Marketplace() {
 										: "listings"}
 								</span>
 							</div>
-						)}
+						)} */}
 					</div>
 
 					{/* Search */}
@@ -110,7 +110,7 @@ export default function Marketplace() {
 								placeholder='Search listings by title, category, or description...'
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
-								className='pl-10 pr-10 h-12 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-sky-500/20 text-base'
+								className='pl-8 md:pl-10 pr-8 md:pr-10 h-8 md:h-10 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:ring-sky-500/20 text-sm md:text-base'
 							/>
 							{searchTerm && (
 								<button
@@ -141,7 +141,7 @@ export default function Marketplace() {
 										}}
 										variant='ghost'
 										size='sm'
-										className={`relative whitespace-nowrap cursor-pointer transition-all duration-200 gap-2 h-9 px-4 ${
+										className={`relative whitespace-nowrap cursor-pointer transition-all duration-200 gap-2 h-7 md:h-9 px-2 md:px-4 text-xs md:text-sm ${
 											selectedCategory === cat
 												? "bg-linear-to-r from-sky-500 to-blue-500 text-white shadow-lg shadow-sky-500/30 hover:from-sky-600 hover:to-blue-600"
 												: "border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:border-slate-300"
@@ -160,7 +160,7 @@ export default function Marketplace() {
 
 					{/* Listings Grid */}
 					{loading ? (
-						<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6'>
+						<div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-6'>
 							{[...Array(12)].map((_, i) => (
 								<Card
 									key={i}
@@ -177,7 +177,7 @@ export default function Marketplace() {
 							))}
 						</div>
 					) : filteredListings.length > 0 ? (
-						<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6'>
+						<div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-6'>
 							{filteredListings.map((listing: any) => (
 								<Link
 									key={listing._id}
@@ -187,7 +187,7 @@ export default function Marketplace() {
 									className='group'>
 									<Card className='bg-white p-0 border border-slate-200 hover:border-sky-500 transition-all duration-300 hover:shadow-xl hover:shadow-sky-500/10 overflow-hidden h-full flex flex-col gap-1 cursor-pointer hover:-translate-y-1'>
 										{/* Image */}
-										<div className='relative w-full h-48 overflow-hidden bg-linear-to-br from-slate-100 to-slate-200'>
+										<div className='relative w-full h-28 md:h-48 overflow-hidden bg-linear-to-br from-slate-100 to-slate-200'>
 											{listing.thumbnail ||
 											(listing.images &&
 												listing.images[0]) ? (
@@ -202,13 +202,12 @@ export default function Marketplace() {
 											) : (
 												<div className='w-full h-full flex items-center justify-center'>
 													<TrendingUp
-														size={40}
-														className='text-sky-500'
+														className='text-sky-500 w-8 h-8 md:w-10 md:h-10'
 													/>
 												</div>
 											)}
 											{/* Status Badge */}
-											<div className='absolute top-2 right-2'>
+											<div className='absolute top-1.5 md:top-2 right-1.5 md:right-2'>
 												<span
 													className={`${
 														listing.status ===
@@ -218,16 +217,16 @@ export default function Marketplace() {
 															  "active"
 															? "bg-emerald-500/90 text-white"
 															: "bg-amber-500/90 text-white"
-													} text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm shadow-lg capitalize`}>
+													} text-[8px] md:text-xs font-semibold px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-full backdrop-blur-sm shadow-lg capitalize`}>
 													{listing.status}
 												</span>
 											</div>
 											{/* Featured Badge */}
 											{listing.featured && (
-												<div className='absolute top-2 left-2'>
-													<span className='bg-linear-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm shadow-lg flex items-center gap-1'>
+												<div className='absolute top-1.5 md:top-2 left-1.5 md:left-2'>
+													<span className='bg-linear-to-r from-amber-500 to-orange-500 text-white text-[8px] md:text-xs font-semibold px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-full backdrop-blur-sm shadow-lg flex items-center gap-0.5 md:gap-1'>
 														<Star
-															size={12}
+															className='w-2.5 h-2.5 md:w-3 md:h-3'
 															fill='currentColor'
 														/>
 														Featured
@@ -237,27 +236,27 @@ export default function Marketplace() {
 										</div>
 
 										{/* Content */}
-										<CardContent className='p-4 md:p-5 flex-1 flex flex-col'>
+										<CardContent className='p-2.5 md:p-5 flex-1 flex flex-col'>
 											{/* Title & Category */}
-											<div className='mb-3'>
-												<h3 className='text-slate-900 font-bold text-base md:text-lg mb-2 line-clamp-2 group-hover:text-sky-600 transition-colors'>
+											<div className='mb-2 md:mb-3'>
+												<h3 className='text-slate-900 font-bold text-xs md:text-lg mb-1 md:mb-2 line-clamp-1 md:line-clamp-2 group-hover:text-sky-600 transition-colors'>
 													{listing.title}
 												</h3>
-												<div className='flex items-center gap-2'>
-													<span className='px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-semibold border border-slate-200'>
+												<div className='flex items-center gap-1 md:gap-2'>
+													<span className='px-1.5 md:px-2.5 py-0.5 md:py-1 bg-slate-100 text-slate-700 rounded-full text-[8px] md:text-xs font-semibold border border-slate-200'>
 														{listing.category}
 													</span>
 												</div>
 											</div>
 
 											{/* Price */}
-											<div className='mb-3'>
-												<div className='flex items-baseline gap-1'>
+											<div className='mb-2 md:mb-3'>
+												<div className='flex items-baseline gap-0.5 md:gap-1'>
 													<DollarSign
-														size={18}
-														className='text-emerald-600'
+														size={14}
+														className='text-emerald-600 md:w-[18px] md:h-[18px]'
 													/>
-													<span className='text-2xl md:text-3xl font-bold text-emerald-600'>
+													<span className='text-base md:text-3xl font-bold text-emerald-600'>
 														{Number(
 															listing.price || 0
 														).toLocaleString()}
@@ -266,14 +265,14 @@ export default function Marketplace() {
 											</div>
 
 											{/* Metrics Grid */}
-											<div className='grid grid-cols-2 gap-2 mb-3 flex-1'>
+											<div className='grid grid-cols-2 gap-1.5 md:gap-2 mb-2 md:mb-3 flex-1'>
 												{listing.metrics
 													?.monthlyRevenue >= 0 && (
-													<div className='bg-linear-to-br from-emerald-50 to-emerald-100/50 rounded-lg p-2 border border-emerald-100'>
-														<p className='text-[10px] text-slate-600 mb-0.5 font-medium'>
-															Revenue/Month
+													<div className='bg-linear-to-br from-emerald-50 to-emerald-100/50 rounded-md md:rounded-lg p-1.5 md:p-2 border border-emerald-100'>
+														<p className='text-[8px] md:text-[10px] text-slate-600 mb-0 font-medium leading-tight'>
+															Rev/Mo
 														</p>
-														<p className='text-xs font-bold text-emerald-700'>
+														<p className='text-[10px] md:text-xs font-bold text-emerald-700'>
 															$
 															{Number(
 																listing.metrics
@@ -284,11 +283,11 @@ export default function Marketplace() {
 												)}
 												{listing.metrics
 													?.monthlyTraffic && (
-													<div className='bg-slate-50 rounded-lg p-2 border border-slate-100'>
-														<p className='text-[10px] text-slate-600 mb-0.5 font-medium'>
-															Traffic/Month
+													<div className='bg-slate-50 rounded-md md:rounded-lg p-1.5 md:p-2 border border-slate-100'>
+														<p className='text-[8px] md:text-[10px] text-slate-600 mb-0 font-medium leading-tight'>
+															Traffic/Mo
 														</p>
-														<p className='text-xs font-bold text-slate-900'>
+														<p className='text-[10px] md:text-xs font-bold text-slate-900'>
 															{Number(
 																listing.metrics
 																	.monthlyTraffic
@@ -297,11 +296,11 @@ export default function Marketplace() {
 													</div>
 												)}
 												{listing.metrics?.followers && (
-													<div className='bg-slate-50 rounded-lg p-2 border border-slate-100'>
-														<p className='text-[10px] text-slate-600 mb-0.5 font-medium'>
+													<div className='bg-slate-50 rounded-md md:rounded-lg p-1.5 md:p-2 border border-slate-100'>
+														<p className='text-[8px] md:text-[10px] text-slate-600 mb-0 font-medium leading-tight'>
 															Followers
 														</p>
-														<p className='text-xs font-bold text-slate-900'>
+														<p className='text-[10px] md:text-xs font-bold text-slate-900'>
 															{Number(
 																listing.metrics
 																	.followers
@@ -310,11 +309,11 @@ export default function Marketplace() {
 													</div>
 												)}
 												{listing.metrics?.age && (
-													<div className='bg-slate-50 rounded-lg p-2 border border-slate-100'>
-														<p className='text-[10px] text-slate-600 mb-0.5 font-medium'>
+													<div className='bg-slate-50 rounded-md md:rounded-lg p-1.5 md:p-2 border border-slate-100'>
+														<p className='text-[8px] md:text-[10px] text-slate-600 mb-0 font-medium leading-tight'>
 															Age
 														</p>
-														<p className='text-xs font-bold text-slate-900'>
+														<p className='text-[10px] md:text-xs font-bold text-slate-900'>
 															{Number(
 																listing.metrics
 																	.age
@@ -323,17 +322,13 @@ export default function Marketplace() {
 														</p>
 													</div>
 												)}
-												{listing.details
-													?.monetization && (
-													<div className='bg-slate-50 rounded-lg p-2 border border-slate-100 col-span-2'>
-														<p className='text-[10px] text-slate-600 mb-0.5 font-medium'>
+												{listing.details?.monetization && (
+													<div className='bg-slate-50 rounded-md md:rounded-lg p-1.5 md:p-2 border border-slate-100 col-span-2'>
+														<p className='text-[8px] md:text-[10px] text-slate-600 mb-0 font-medium leading-tight'>
 															Monetization
 														</p>
-														<p className='text-xs font-bold text-slate-900'>
-															{
-																listing.details
-																	.monetization
-															}
+														<p className='text-[10px] md:text-xs font-bold text-slate-900 line-clamp-1'>
+															{listing.details.monetization}
 														</p>
 													</div>
 												)}
@@ -405,16 +400,16 @@ export default function Marketplace() {
 
 					{/* Pagination */}
 					{filteredListings.length > 0 && (
-						<div className='flex flex-col sm:flex-row justify-center items-center gap-4 mt-8 md:mt-12'>
+						<div className='flex justify-center items-center gap-2 md:gap-4 mt-8 md:mt-12'>
 							<Button
 								onClick={() => setPage(Math.max(1, page - 1))}
 								disabled={page === 1}
 								variant='outline'
-								className='border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed gap-2 min-w-[120px]'>
+								className='border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed gap-2 min-w-[80px] md:min-w-[120px] text-sm md:text-base'>
 								<ChevronLeft size={18} />
 								Previous
 							</Button>
-							<div className='flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-slate-200 shadow-sm'>
+							<div className='flex items-center gap-2 px-2 md:px-4 py-2 bg-white rounded-lg border border-slate-200 shadow-sm'>
 								<span className='text-sm font-semibold text-slate-700'>
 									Page {page}
 								</span>
@@ -431,7 +426,7 @@ export default function Marketplace() {
 							<Button
 								onClick={() => setPage(page + 1)}
 								disabled={filteredListings.length < 12}
-								className='bg-linear-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white shadow-lg shadow-sky-500/20 disabled:opacity-50 disabled:cursor-not-allowed gap-2 min-w-[120px]'>
+								className='bg-linear-to-r from-sky-500 to-blue-500 hover:from-sky-600 hover:to-blue-600 text-white shadow-lg shadow-sky-500/20 disabled:opacity-50 disabled:cursor-not-allowed gap-2 min-w-[80px] md:min-w-[120px] text-sm md:text-base'>
 								Next
 								<ChevronRight size={18} />
 							</Button>
