@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +23,6 @@ import { GoogleIcon } from "@/components/icons/GoogleIcon";
 import { userContext } from "@/context/userContext";
 
 export default function Login() {
-	const router = useRouter();
     const { setUser } = userContext();
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
@@ -64,12 +62,6 @@ export default function Login() {
                 userData = await userService.getUser(user.uid);
             }
 
-            if (!userData?.phone) {
-                toast.info("Please complete your profile");
-                router.push("/signup?step=profile&uid=" + user.uid);
-                return;
-            }
-
             await finalizeLogin(user);
 		} catch (err: any) {
 			console.error("Google Auth Error:", err);
@@ -102,12 +94,6 @@ export default function Login() {
             const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
             const user = userCredential.user;
             
-            const userData = await userService.getUser(user.uid);
-            if (userData && !userData.phone) {
-                router.push("/signup?step=profile&uid=" + user.uid);
-                return;
-            }
-
             await finalizeLogin(user);
 		} catch (err: any) {
 			setError(err.message || "An error occurred. Please try again.");
