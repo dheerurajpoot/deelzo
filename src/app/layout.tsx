@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/context/userContext";
 import { CartProvider } from "@/context/CartContext";
 import LayoutShell from "@/components/layout-shell";
-import Head from "next/head";
 import Script from "next/script";
 import { WhatsAppButton } from "@/components/whatsapp-button";
 
@@ -93,32 +92,31 @@ export default function RootLayout({
 }) {
 	return (
 		<html lang='en' suppressHydrationWarning>
-			<Head>
-				{/* Google Analytics Script */}
-				<Script
-					async
-					src='https://www.googletagmanager.com/gtag/js?id=G-N3VCPJDW2D'
-					strategy='afterInteractive'
-				/>
-				<Script
-					id='google-analytics'
-					suppressHydrationWarning
-					dangerouslySetInnerHTML={{
-						__html: `
+			{/* Google Analytics Script */}
+			<Script
+				async
+				src='https://www.googletagmanager.com/gtag/js?id=G-N3VCPJDW2D'
+				strategy='afterInteractive'
+			/>
+			<Script
+				id='google-analytics'
+				suppressHydrationWarning
+				dangerouslySetInnerHTML={{
+					__html: `
 							window.dataLayer = window.dataLayer || [];
 							function gtag(){window.dataLayer.push(arguments);}
 							gtag('js', new Date());
 							gtag('config', 'G-N3VCPJDW2D');
 						`,
-					}}
-				/>
+				}}
+			/>
 
-				{/* Taboola Pixel Code */}
-				<Script
-					type='text/javascript'
-					suppressHydrationWarning
-					dangerouslySetInnerHTML={{
-						__html: `
+			{/* Taboola Pixel Code */}
+			<Script
+				type='text/javascript'
+				suppressHydrationWarning
+				dangerouslySetInnerHTML={{
+					__html: `
 		window._tfa = window._tfa || [];
 		window._tfa.push({notify: 'event', name: 'page_view', id: 1989620});
 		!function (t, f, a, x) {
@@ -130,90 +128,90 @@ export default function RootLayout({
 		'//cdn.taboola.com/libtrc/unip/1989620/tfa.js',
 		'tb_tfa_script');
 `,
-					}}
-				/>
-				{/* End of Taboola Pixel Code */}
-				<meta
-					name='viewport'
-					content='width=device-width, initial-scale=1'
-				/>
-				<meta
-					name='google-adsense-account'
-					content='ca-pub-6240928678530100'
-				/>
-				<meta name='theme-color' content='#f8fafc' />
-				<meta name='apple-mobile-web-app-capable' content='yes' />
-				<meta
-					name='apple-mobile-web-app-status-bar-style'
-					content='default'
-				/>
-				{/* Structured Data - Organization */}
-				<Script
-					type='application/ld+json'
-					suppressHydrationWarning
-					dangerouslySetInnerHTML={{
-						__html: JSON.stringify({
-							"@context": "https://schema.org",
-							"@type": "Organization",
-							name: "Deelzo",
-							url: "https://www.deelzo.com/",
-							logo: "/logo.png",
-							description:
-								"Trusted marketplace for buying and selling digital assets",
-							contactPoint: {
-								"@type": "ContactPoint",
-								contactType: "Customer Service",
-								email: "evtnorg@gmail.com",
+				}}
+			/>
+			{/* End of Taboola Pixel Code */}
+			<meta
+				name='viewport'
+				content='width=device-width, initial-scale=1'
+			/>
+			<meta
+				name='google-adsense-account'
+				content='ca-pub-6240928678530100'
+			/>
+			<meta name='theme-color' content='#f8fafc' />
+			<meta name='apple-mobile-web-app-capable' content='yes' />
+			<meta
+				name='apple-mobile-web-app-status-bar-style'
+				content='default'
+			/>
+			{/* Structured Data - Organization */}
+			<Script
+				type='application/ld+json'
+				suppressHydrationWarning
+				dangerouslySetInnerHTML={{
+					__html: JSON.stringify({
+						"@context": "https://schema.org",
+						"@type": "Organization",
+						name: "Deelzo",
+						url: "https://www.deelzo.com/",
+						logo: "/logo.png",
+						description:
+							"Trusted marketplace for buying and selling digital assets",
+						contactPoint: {
+							"@type": "ContactPoint",
+							contactType: "Customer Service",
+							email: "evtnorg@gmail.com",
+						},
+					}),
+				}}
+			/>
+			{/* Structured Data - WebSite */}
+			<Script
+				type='application/ld+json'
+				suppressHydrationWarning
+				dangerouslySetInnerHTML={{
+					__html: JSON.stringify({
+						"@context": "https://schema.org",
+						"@type": "WebSite",
+						name: "Deelzo",
+						url: "https://www.deelzo.com/",
+						potentialAction: {
+							"@type": "SearchAction",
+							target: {
+								"@type": "EntryPoint",
+								urlTemplate:
+									"https://www.deelzo.com/marketplace",
 							},
-						}),
-					}}
-				/>
-				{/* Structured Data - WebSite */}
-				<Script
-					type='application/ld+json'
-					suppressHydrationWarning
-					dangerouslySetInnerHTML={{
-						__html: JSON.stringify({
-							"@context": "https://schema.org",
-							"@type": "WebSite",
-							name: "Deelzo",
-							url: "https://www.deelzo.com/",
-							potentialAction: {
-								"@type": "SearchAction",
-								target: {
-									"@type": "EntryPoint",
-									urlTemplate:
-										"https://www.deelzo.com/marketplace",
-								},
-								"query-input":
-									"required name=search_term_string",
-							},
-						}),
-					}}
-				/>
-				{/* Structured Data - Marketplace */}
-				<Script
-					type='application/ld+json'
-					suppressHydrationWarning
-					dangerouslySetInnerHTML={{
-						__html: JSON.stringify({
-							"@context": "https://schema.org",
-							"@type": "OnlineStore",
-							name: "Deelzo",
-							description:
-								"Buy and sell digital assets including websites, YouTube channels, social media accounts, mobile apps, and SaaS products",
-							url: "https://www.deelzo.com/",
-							priceRange: "$$",
-						}),
-					}}
-				/>
+							"query-input": "required name=search_term_string",
+						},
+					}),
+				}}
+			/>
+			{/* Structured Data - Marketplace */}
+			<Script
+				type='application/ld+json'
+				suppressHydrationWarning
+				dangerouslySetInnerHTML={{
+					__html: JSON.stringify({
+						"@context": "https://schema.org",
+						"@type": "OnlineStore",
+						name: "Deelzo",
+						description:
+							"Buy and sell digital assets including websites, YouTube channels, social media accounts, mobile apps, and SaaS products",
+						url: "https://www.deelzo.com/",
+						priceRange: "$$",
+					}),
+				}}
+			/>
 
-				<script
-					async
-					src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6240928678530100'
-					crossOrigin='anonymous'
-				/>
-			</Head>
+			{/* Google AdSense Script */}
+			<Script
+				async
+				src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6240928678530100'
+				crossOrigin='anonymous'
+				strategy='afterInteractive'
+			/>
 			<body
 				className={`${geistSans.className} bg-gray-50`}
 				suppressHydrationWarning>
