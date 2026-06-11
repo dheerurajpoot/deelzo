@@ -97,11 +97,11 @@ export default function RootLayout({
 				{/* Google Analytics Script */}
 				<Script
 					async
-					src="https://www.googletagmanager.com/gtag/js?id=G-N3VCPJDW2D"
-					strategy="afterInteractive"
+					src='https://www.googletagmanager.com/gtag/js?id=G-N3VCPJDW2D'
+					strategy='afterInteractive'
 				/>
 				<Script
-					id="google-analytics"
+					id='google-analytics'
 					suppressHydrationWarning
 					dangerouslySetInnerHTML={{
 						__html: `
@@ -112,7 +112,7 @@ export default function RootLayout({
 						`,
 					}}
 				/>
-				
+
 				{/* Taboola Pixel Code */}
 				<Script
 					type='text/javascript'
@@ -137,7 +137,10 @@ export default function RootLayout({
 					name='viewport'
 					content='width=device-width, initial-scale=1'
 				/>
-				<meta name="google-adsense-account" content="ca-pub-3138751846532107"/>
+				<meta
+					name='google-adsense-account'
+					content='ca-pub-6240928678530100'
+				/>
 				<meta name='theme-color' content='#f8fafc' />
 				<meta name='apple-mobile-web-app-capable' content='yes' />
 				<meta
@@ -204,10 +207,10 @@ export default function RootLayout({
 						}),
 					}}
 				/>
-				
+
 				<script
 					async
-					src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3138751846532107'
+					src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6240928678530100'
 					crossOrigin='anonymous'
 				/>
 			</Head>
