@@ -137,7 +137,7 @@ export default function RootLayout({
 			/>
 			<meta
 				name='google-adsense-account'
-				content='ca-pub-6240928678530100'
+				content='ca-pub-8094520346016014'
 			/>
 			<meta name='theme-color' content='#f8fafc' />
 			<meta name='apple-mobile-web-app-capable' content='yes' />
@@ -208,7 +208,7 @@ export default function RootLayout({
 			{/* Google AdSense Script */}
 			<Script
 				async
-				src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6240928678530100'
+				src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8094520346016014'
 				crossOrigin='anonymous'
 				strategy='afterInteractive'
 			/>
