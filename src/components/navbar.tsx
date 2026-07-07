@@ -15,6 +15,7 @@ import {
 	Shield,
 	Book,
 	TrendingUp,
+	Briefcase,
 } from "lucide-react";
 import { userContext } from "@/context/userContext";
 import { useCart } from "@/context/CartContext";
@@ -34,6 +35,7 @@ export default function Navbar() {
 
 	const navLinks = [
 		{ href: "/shop", label: "Shop", icon: ShoppingBag },
+		{ href: "/services", label: "Services", icon: Briefcase },
 		{ href: "/blogs", label: "Blogs", icon: Book },
 		{ href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
 		{ href: "/guide", label: "Guide", icon: BookOpen },
